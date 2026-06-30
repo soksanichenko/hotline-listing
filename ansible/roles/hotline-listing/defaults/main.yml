@@ -1,0 +1,17 @@
+---
+hotline_listing_container_name: 'hotline-listing'
+hotline_listing_image: 'hotline-listing:local'
+hotline_listing_http_port: 8999
+hotline_listing_data_dir: "{{ docker_volumes_directory }}/hotline-listing"
+hotline_listing_nginx_proxy: false
+hotline_listing_root_path: '/hotline-listing'
+
+# Path to the project on the Ansible controller — used to sync source before build.
+hotline_listing_local_source_dir: "{{ playbook_dir }}/../.."
+
+# Connection strings used in the templated config.yaml mounted into the container.
+hotline_listing_database_url: "postgresql://postgres:{{ postgres_password }}@{{ postgresql_container_name }}:5432/hotline_prices"
+hotline_listing_redis_url: "redis://{{ redis_container_name }}:6379"
+hotline_listing_cache_ttl: 3600
+hotline_listing_city_id: 154
+...

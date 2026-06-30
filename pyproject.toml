@@ -1,0 +1,16 @@
+[project]
+name = "hotline-listing"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi==0.115.12",
+    "uvicorn==0.34.3",
+    "httpx==0.28.1",
+    "redis==5.2.1",
+    "pyyaml==6.0.2",
+    "pydantic==2.11.5",
+    "jinja2==3.1.6",
+]
+
+[tool.setuptools.packages.find]
+where = ["sources/src"]

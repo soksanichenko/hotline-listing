@@ -1,0 +1,9 @@
+---
+- name: Deploy hotline-listing
+  hosts: vds
+  pre_tasks:
+    - name: Load Infisical secrets
+      import_tasks: pre_tasks/infisical.yml
+  roles:
+    - hotline-listing
+...

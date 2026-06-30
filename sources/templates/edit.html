@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hotline Prices — Редактор</title>
+  <link rel="stylesheet" href="{{ root_path }}/static/style.css?v={{ static_version }}">
+</head>
+<body>
+
+<header>
+  <a class="header-name" href="{{ root_path }}/">Hotline <span>Prices</span></a>
+  <div class="header-right">
+    <a class="btn-link" href="{{ root_path }}/{{ config_id }}">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span data-i18n="to_table">До таблиці</span>
+    </a>
+    <div class="lang-selector">
+      <select id="lang-select" onchange="setLang(this.value)" aria-label="Language">
+        <option value="uk">🇺🇦 UK</option>
+        <option value="en">🇬🇧 EN</option>
+        <option value="ru">🇷🇺 RU</option>
+      </select>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="section">
+    <h2 data-i18n="section_products">Список товарів</h2>
+
+    <div id="rows">
+      {% for p in products %}
+      <div class="product-row" data-idx="{{ loop.index0 }}">
+        <div class="row-fields">
+          <div class="field field-url">
+            <label data-i18n="label_url">URL товару на Hotline</label>
+            <input type="url" name="url" value="{{ p.url }}" placeholder="https://hotline.ua/ua/...">
+          </div>
+          <div class="field field-title">
+            <label data-i18n="label_title">Назва (опціонально)</label>
+            <input type="text" name="title" value="{{ p.title or '' }}" placeholder="Назва товару" data-i18n-placeholder="placeholder_title">
+          </div>
+          <div class="field field-sm">
+            <label data-i18n="col_count">К-сть</label>
+            <input type="number" name="count" value="{{ p.count }}" min="1" step="1">
+          </div>
+          <div class="field field-sm">
+            <label data-i18n="label_purchase_price">Ціна купівлі, ₴</label>
+            <input type="number" name="purchase_price" value="{{ p.purchase_price or '' }}" min="0" step="0.01" placeholder="—">
+          </div>
+          <div class="field field-sm">
+            <label data-i18n="label_purchase_date">Дата купівлі</label>
+            <input type="date" name="purchase_date" value="{{ p.purchase_date or '' }}">
+          </div>
+          <button class="btn-remove" type="button" onclick="removeRow(this)" data-i18n-title="remove" title="Видалити">✕</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div style="margin-top:1rem;display:flex;gap:0.75rem;flex-wrap:wrap">
+      <button class="btn-link" type="button" onclick="addRow()"><span data-i18n="add_product">+ Додати товар</span></button>
+      <button class="btn-primary" type="button" onclick="save()"><span data-i18n="save">Зберегти</span></button>
+      <button class="btn-link" type="button" onclick="downloadYaml()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span data-i18n="export_yaml">Завантажити YAML</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="section" style="margin-top:1.5rem">
+    <h2 data-i18n="section_share">Посилання на таблицю</h2>
+    <p style="color:var(--text-muted);margin-bottom:0.75rem" data-i18n="share_hint">Збережи це посилання — воно відкриває твою таблицю:</p>
+    <div style="display:flex;align-items:center;gap:0.75rem">
+      <code class="share-url" id="share-url"></code>
+      <button class="btn-link" type="button" onclick="copyUrl()"><span data-i18n="copy_url">Скопіювати</span></button>
+    </div>
+  </div>
+</main>
+
+<script src="{{ root_path }}/static/i18n.js?v={{ static_version }}"></script>
+<script>
+const CONFIG_ID = '{{ config_id }}';
+const ROOT_PATH = '{{ root_path }}';
+
+document.getElementById('share-url').textContent =
+  window.location.origin + ROOT_PATH + '/' + CONFIG_ID;
+
+(function remember() {
+  const ids = JSON.parse(localStorage.getItem('hotline_configs') || '[]');
+  if (!ids.includes(CONFIG_ID)) {
+    ids.push(CONFIG_ID);
+    localStorage.setItem('hotline_configs', JSON.stringify(ids));
+  }
+})();
+
+const EMPTY_ROW = `
+<div class="product-row">
+  <div class="row-fields">
+    <div class="field field-url">
+      <label data-i18n="label_url">URL товару на Hotline</label>
+      <input type="url" name="url" value="" placeholder="https://hotline.ua/ua/...">
+    </div>
+    <div class="field field-title">
+      <label data-i18n="label_title">Назва (опціонально)</label>
+      <input type="text" name="title" value="" placeholder="Назва товару" data-i18n-placeholder="placeholder_title">
+    </div>
+    <div class="field field-sm">
+      <label data-i18n="col_count">К-сть</label>
+      <input type="number" name="count" value="1" min="1" step="1">
+    </div>
+    <div class="field field-sm">
+      <label data-i18n="label_purchase_price">Ціна купівлі, ₴</label>
+      <input type="number" name="purchase_price" value="" min="0" step="0.01" placeholder="—">
+    </div>
+    <div class="field field-sm">
+      <label data-i18n="label_purchase_date">Дата купівлі</label>
+      <input type="date" name="purchase_date" value="">
+    </div>
+    <button class="btn-remove" type="button" onclick="removeRow(this)" data-i18n-title="remove" title="Видалити">✕</button>
+  </div>
+</div>`;
+
+function addRow() {
+  document.getElementById('rows').insertAdjacentHTML('beforeend', EMPTY_ROW);
+  applyLang(currentLang);
+}
+
+function removeRow(btn) {
+  btn.closest('.product-row').remove();
+}
+
+function collectProducts() {
+  return [...document.querySelectorAll('.product-row')].map(row => {
+    const v = name => row.querySelector(`[name="${name}"]`).value.trim();
+    const product = { url: v('url'), count: parseInt(v('count')) || 1 };
+    if (v('title'))          product.title          = v('title');
+    if (v('purchase_price')) product.purchase_price = parseFloat(v('purchase_price'));
+    if (v('purchase_date'))  product.purchase_date  = v('purchase_date');
+    return product;
+  }).filter(p => p.url);
+}
+
+async function save() {
+  const products = collectProducts();
+  const res = await fetch(`${ROOT_PATH}/${CONFIG_ID}/save`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ products }),
+  });
+  if (res.redirected) {
+    window.location.href = res.url;
+  } else if (!res.ok) {
+    alert(t('save_error') + res.status);
+  }
+}
+
+function toYaml(products) {
+  if (!products.length) return 'products: []\n';
+  let out = 'products:\n';
+  for (const p of products) {
+    out += `  - url: ${p.url}\n`;
+    if (p.title) out += `    title: "${p.title.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"\n`;
+    out += `    count: ${p.count}\n`;
+    if (p.purchase_price != null) out += `    purchase_price: ${p.purchase_price}\n`;
+    if (p.purchase_date)          out += `    purchase_date: ${p.purchase_date}\n`;
+  }
+  return out;
+}
+
+function downloadYaml() {
+  const yaml = toYaml(collectProducts());
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([yaml], { type: 'text/yaml' }));
+  a.download = `hotline-${CONFIG_ID.slice(0, 8)}.yaml`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function copyUrl() {
+  navigator.clipboard.writeText(document.getElementById('share-url').textContent);
+}
+</script>
+
+</body>
+</html>

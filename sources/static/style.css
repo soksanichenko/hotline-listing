@@ -1,0 +1,337 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --border: #2a2d3a;
+    --accent: #4f8ef7;
+    --accent-hover: #6ea3ff;
+    --text: #e2e6f0;
+    --text-muted: #8891a8;
+    --link: #4f8ef7;
+    --link-hover: #6ea3ff;
+    --tag-bg: #1e2235;
+    --radius: 10px;
+    --error: #f87171;
+}
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+
+header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(15, 17, 23, 0.92);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+    padding: 0.75rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.header-name {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: 0.02em;
+}
+
+.header-name span { color: var(--accent); }
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.meta {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.lang-selector select {
+    appearance: none;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.35rem 2rem 0.35rem 0.75rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238891a8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.6rem center;
+}
+
+.lang-selector select:hover,
+.lang-selector select:focus { border-color: var(--accent); }
+
+/* ── Layout ──────────────────────────────────────────────────────────────── */
+
+main {
+    padding: 2rem 1.25rem 4rem;
+}
+
+.section {
+    padding: 1.25rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+}
+
+.section h2 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin-bottom: 1.25rem;
+}
+
+/* ── Table ───────────────────────────────────────────────────────────────── */
+
+.table-wrap {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+th {
+    text-align: left;
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    padding: 0.4rem 0.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+td {
+    padding: 0.55rem 0.5rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+
+tbody tr:last-child td { border-bottom: none; }
+
+tbody tr:nth-child(even) td { background: rgba(255, 255, 255, 0.018); }
+
+tbody tr:hover td { background: rgba(79, 142, 247, 0.05); }
+
+.col-title { min-width: 140px; }
+.col-num { text-align: right; white-space: nowrap; }
+.col-date { white-space: nowrap; font-size: 0.82rem; color: var(--text-muted); }
+.col-chart { text-align: center; width: 100px; }
+.col-links { white-space: nowrap; width: 64px; text-align: center; }
+
+/* ── Chart page ──────────────────────────────────────────────────────────── */
+
+.chart-container { position: relative; height: 420px; }
+
+.chart-meta {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.chart-meta a { font-size: 0.82rem; }
+
+/* ── Cell content ────────────────────────────────────────────────────────── */
+
+.col-title a {
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.15s;
+}
+
+.col-title a:hover { color: var(--accent); }
+
+.price {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.price-usd {
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+}
+
+.qty { color: var(--text-muted); }
+
+/* ── Sparkline ───────────────────────────────────────────────────────────── */
+
+.spark { display: block; margin: 0 auto; }
+
+/* ── Link buttons ────────────────────────────────────────────────────────── */
+
+.btn-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.3rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.78rem;
+    transition: border-color 0.15s, color 0.15s;
+    margin-right: 0.35rem;
+}
+
+.btn-link:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* ── Total row ───────────────────────────────────────────────────────────── */
+
+tfoot .row-total td {
+    border-top: 1px solid var(--border);
+    padding-top: 0.85rem;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--bg);
+    border-bottom: none;
+}
+
+/* ── Purchase info ───────────────────────────────────────────────────────── */
+
+.purchase-price { display: block; font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.purchase-date  { display: block; font-size: 0.75rem; color: var(--text-muted); opacity: 0.7; }
+
+.diff-up   { color: #f87171; font-variant-numeric: tabular-nums; }
+.diff-down { color: #4ade80; font-variant-numeric: tabular-nums; }
+.diff-zero { color: var(--text-muted); }
+
+/* ── Error state ─────────────────────────────────────────────────────────── */
+
+.row-error td { opacity: 0.7; }
+
+.error-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--error);
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    margin-right: 0.35rem;
+    vertical-align: middle;
+}
+
+.error-msg {
+    font-size: 0.75rem;
+    color: var(--error);
+    margin-top: 0.2rem;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 1.25rem;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.btn-primary:hover { background: var(--accent-hover); }
+
+/* ── Editor ──────────────────────────────────────────────────────────────── */
+
+.product-row {
+    padding: 1rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 0.6rem;
+}
+
+.row-fields {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.field { display: flex; flex-direction: column; gap: 0.3rem; }
+.field label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+.field input {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.4rem 0.65rem;
+    font-size: 0.88rem;
+    outline: none;
+    transition: border-color 0.15s;
+}
+.field input:focus { border-color: var(--accent); }
+.field input::placeholder { color: var(--text-muted); opacity: 0.6; }
+
+.field-url   { flex: 3; min-width: 220px; }
+.field-title { flex: 2; min-width: 160px; }
+.field-sm    { flex: 1; min-width: 100px; }
+
+.btn-remove {
+    background: none;
+    border: 1px solid transparent;
+    color: var(--text-muted);
+    border-radius: 6px;
+    padding: 0.4rem 0.6rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: color 0.15s, border-color 0.15s;
+    align-self: flex-end;
+    flex-shrink: 0;
+}
+.btn-remove:hover { color: #f87171; border-color: #f87171; }
+
+.share-url {
+    font-family: monospace;
+    font-size: 0.85rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.4rem 0.75rem;
+    color: var(--accent);
+    word-break: break-all;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+
+@media (max-width: 700px) {
+    header { padding: 0.75rem 1rem; }
+    main { padding: 1.5rem 1rem 4rem; }
+    .section { padding: 1.25rem; }
+}

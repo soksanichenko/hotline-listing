@@ -1,0 +1,10 @@
+---
+- name: Deploy hotline-listing nginx location config
+  ansible.builtin.template:
+    src: nginx-location.conf.j2
+    dest: "{{ nginx_domain_custom_locations_path }}/hotline-listing.conf"
+    mode: '0644'
+  become: yes
+  when: hotline_listing_nginx_proxy
+  notify: Restart Nginx container
+...

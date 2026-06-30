@@ -1,0 +1,22 @@
+---
+infisical_project_id: "286db07f-4dba-4ca9-a515-f017d77b8bf1"
+infisical_path: "/hosts/zelgray-work"
+
+docker_network: "active"
+docker_volumes_directory: "/opt/docker"
+
+nginx_docker_container_name: "nginx-server"
+nginx_volumes_path: "{{ docker_volumes_directory }}/nginx"
+nginx_confd_path: "{{ nginx_volumes_path }}/conf.d"
+nginx_domain_custom_locations_path: "{{ nginx_confd_path }}/zelgray.work-custom-locations"
+
+postgresql_container_name: "postgresql"
+redis_container_name: "redis"
+postgres_password: "{{ infisical_secrets.secrets['postgres-db-password'] }}"
+
+hotline_listing_nginx_proxy: true
+
+cf_zone_domain: "zelgray.work"
+cf_api_token_clear_cache: "{{ infisical_secrets.secrets['cf-api-token-clear-cache'] }}"
+cf_purge_cache: true
+...

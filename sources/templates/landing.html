@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hotline Prices</title>
+  <link rel="stylesheet" href="{{ root_path }}/static/style.css?v={{ static_version }}">
+</head>
+<body>
+
+<header>
+  <span class="header-name">Hotline <span>Prices</span></span>
+  <div class="header-right">
+    <div class="lang-selector">
+      <select id="lang-select" onchange="setLang(this.value)" aria-label="Language">
+        <option value="uk">🇺🇦 UK</option>
+        <option value="en">🇬🇧 EN</option>
+        <option value="ru">🇷🇺 RU</option>
+      </select>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="section">
+    <h2 data-i18n="landing_title">Моніторинг цін з Hotline.ua</h2>
+    <p style="color:var(--text-muted);margin-bottom:1.5rem" data-i18n="landing_desc">
+      Додай список товарів — отримай зведену таблицю з поточними цінами, динамікою та порівнянням з ціною купівлі.
+      Твоя таблиця зберігається за унікальним посиланням.
+    </p>
+
+    <div style="display:flex;gap:1rem;flex-wrap:wrap">
+      <form method="post" action="{{ root_path }}/">
+        <button class="btn-primary" type="submit" data-i18n="new_table">Нова таблиця</button>
+      </form>
+
+      <form method="post" action="{{ root_path }}/import" enctype="multipart/form-data" id="import-form">
+        <label class="btn-link" style="cursor:pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span data-i18n="import_yaml">Імпортувати YAML</span>
+          <input type="file" name="file" accept=".yaml,.yml" style="display:none" onchange="document.getElementById('import-form').submit()">
+        </label>
+      </form>
+    </div>
+  </div>
+
+  <div class="section" id="recent-section" style="display:none;margin-top:1.5rem">
+    <h2 data-i18n="my_tables">Мої таблиці</h2>
+    <div id="recent-list" style="display:flex;flex-direction:column;gap:0.5rem"></div>
+  </div>
+</main>
+
+<script src="{{ root_path }}/static/i18n.js?v={{ static_version }}"></script>
+<script>
+const ROOT_PATH = '{{ root_path }}';
+
+function loadRecent() {
+  const ids = JSON.parse(localStorage.getItem('hotline_configs') || '[]');
+  const section = document.getElementById('recent-section');
+  const list = document.getElementById('recent-list');
+  if (!ids.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  list.innerHTML = '';
+  ids.slice().reverse().forEach(id => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:0.75rem';
+    row.innerHTML = `
+      <a class="btn-link" href="${ROOT_PATH}/${id}" style="font-family:monospace;font-size:0.8rem">${id}</a>
+      <a class="btn-link" href="${ROOT_PATH}/${id}/edit">${t('edit')}</a>
+      <button class="btn-link" style="border-color:transparent;color:var(--text-muted)" onclick="removeConfig('${id}')" title="${t('remove')}">✕</button>`;
+    list.appendChild(row);
+  });
+}
+
+function removeConfig(id) {
+  const ids = JSON.parse(localStorage.getItem('hotline_configs') || '[]');
+  localStorage.setItem('hotline_configs', JSON.stringify(ids.filter(x => x !== id)));
+  loadRecent();
+}
+
+function onLangChange() { loadRecent(); }
+
+loadRecent();
+</script>
+
+</body>
+</html>

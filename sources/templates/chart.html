@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }} — Hotline Prices</title>
+  <link rel="stylesheet" href="{{ root_path }}/static/style.css?v={{ static_version }}">
+</head>
+<body>
+
+<header>
+  <a class="header-name" href="{{ root_path }}/">Hotline <span>Prices</span></a>
+  <div class="header-right">
+    <a class="btn-link" href="{{ root_path }}/{{ config_id }}">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      <span data-i18n="back">Назад</span>
+    </a>
+    {% if hotline_url %}
+    <a class="btn-link" href="{{ hotline_url }}" target="_blank" rel="noopener">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      Hotline
+    </a>
+    {% endif %}
+    <div class="lang-selector">
+      <select id="lang-select" onchange="setLang(this.value)" aria-label="Language">
+        <option value="uk">🇺🇦 UK</option>
+        <option value="en">🇬🇧 EN</option>
+        <option value="ru">🇷🇺 RU</option>
+      </select>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="section">
+    <h2>{{ title }}</h2>
+    <div class="chart-container">
+      <canvas id="price-chart"></canvas>
+    </div>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="{{ root_path }}/static/i18n.js?v={{ static_version }}"></script>
+<script>
+  const uahSeries = {{ uah_series | tojson }};
+  const usdSeries = {{ usd_series | tojson }};
+
+  const labels = uahSeries.map(([ts]) =>
+    new Date(ts).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  );
+  const uahData = uahSeries.map(([, v]) => v);
+  const usdData = usdSeries.map(([, v]) => v);
+
+  const fmtUAH = v => v.toLocaleString('uk-UA', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' ₴';
+  const fmtUSD = v => '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  new Chart(document.getElementById('price-chart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Ціна, ₴',
+          data: uahData,
+          borderColor: '#4f8ef7',
+          backgroundColor: 'rgba(79, 142, 247, 0.08)',
+          borderWidth: 2,
+          pointRadius: 0,
+          pointHitRadius: 8,
+          tension: 0.2,
+          fill: true,
+          yAxisID: 'y',
+        },
+        {
+          label: 'Ціна, $',
+          data: usdData,
+          borderColor: '#8891a8',
+          backgroundColor: 'transparent',
+          borderWidth: 1.5,
+          pointRadius: 0,
+          pointHitRadius: 8,
+          tension: 0.2,
+          fill: false,
+          yAxisID: 'y2',
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          labels: { color: '#8891a8', boxWidth: 12, padding: 16 },
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => ctx.datasetIndex === 0
+              ? ' ' + fmtUAH(ctx.parsed.y)
+              : ' ' + fmtUSD(ctx.parsed.y),
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks: { color: '#8891a8', maxTicksLimit: 10, maxRotation: 0 },
+          grid: { color: '#2a2d3a' },
+        },
+        y: {
+          position: 'left',
+          ticks: { color: '#4f8ef7', callback: fmtUAH },
+          grid: { color: '#2a2d3a' },
+        },
+        y2: {
+          position: 'right',
+          ticks: { color: '#8891a8', callback: fmtUSD },
+          grid: { display: false },
+        },
+      },
+    },
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+---
+- name: Create hotline-listing data directory
+  ansible.builtin.file:
+    path: "{{ hotline_listing_data_dir }}"
+    state: directory
+    mode: '0755'
+  become: yes
+  tags:
+    - hotline-listing
+
+- name: Sync hotline-listing source to build directory
+  ansible.posix.synchronize:
+    src: "{{ hotline_listing_local_source_dir }}/sources/"
+    dest: "{{ hotline_listing_data_dir }}/"
+    delete: yes
+    rsync_opts:
+      - "--exclude=__pycache__"
+      - "--exclude=*.pyc"
+      - "--exclude=.venv"
+  become: yes
+  register: _hotline_listing_source
+  tags:
+    - hotline-listing
+
+- name: Compute static files version hash
+  ansible.builtin.set_fact:
+    _hotline_listing_static_version: >-
+      {{ (
+        lookup('file', hotline_listing_local_source_dir + '/sources/static/style.css') +
+        lookup('file', hotline_listing_local_source_dir + '/sources/static/i18n.js')
+      ) | hash('md5') | truncate(8, true, '') }}
+  tags:
+    - hotline-listing
+
+- name: Build hotline-listing Docker image
+  community.docker.docker_image:
+    name: hotline-listing
+    tag: local
+    source: build
+    build:
+      path: "{{ hotline_listing_data_dir }}"
+      pull: yes
+    force_source: "{{ _hotline_listing_source.changed }}"
+  become: yes
+  tags:
+    - hotline-listing
+
+- name: Deploy hotline-listing config
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: "{{ hotline_listing_data_dir }}/config.yaml"
+    mode: '0644'
+  become: yes
+  tags:
+    - hotline-listing
+
+- name: Deploy hotline-listing container
+  community.docker.docker_container:
+    name: "{{ hotline_listing_container_name }}"
+    image: "{{ hotline_listing_image }}"
+    state: started
+    restart_policy: unless-stopped
+    recreate: "{{ docker_force_recreate | default(false) }}"
+    pull: false
+    networks:
+      - name: "{{ docker_network }}"
+    log_driver: journald
+    env:
+      ROOT_PATH: "{{ hotline_listing_root_path }}"
+      STATIC_VERSION: "{{ _hotline_listing_static_version }}"
+    volumes:
+      - "{{ hotline_listing_data_dir }}/config.yaml:/app/config.yaml:ro"
+  become: yes
+  tags:
+    - hotline-listing
+
+- name: Configure hotline-listing nginx
+  import_tasks: nginx.yml
+  tags:
+    - hotline-listing
+    - hotline-listing-nginx
+
+- name: Purge Cloudflare cache
+  ansible.builtin.uri:
+    url: "https://api.cloudflare.com/client/v4/zones/{{ cf_zone_id }}/purge_cache"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ cf_api_token_clear_cache }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      purge_everything: true
+    status_code: 200
+  when: cf_purge_cache | default(false) | bool
+  delegate_to: localhost
+  no_log: true
+  tags:
+    - hotline-listing
+    - cf-purge
+...
