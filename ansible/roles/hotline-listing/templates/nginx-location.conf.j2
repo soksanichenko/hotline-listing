@@ -4,6 +4,7 @@ location = /hotline-listing {
 }
 
 location /hotline-listing/ {
+    proxy_intercept_errors on;
     proxy_pass http://{{ hotline_listing_container_name }}:{{ hotline_listing_http_port }}/;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
