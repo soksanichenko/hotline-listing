@@ -12,12 +12,12 @@ class Base(DeclarativeBase):
 class Config(Base):
     """User price-watch config stored as JSONB."""
 
-    __tablename__ = 'configs'
+    __tablename__ = "configs"
 
     id: MappedColumn[UUID] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
-        server_default=text('gen_random_uuid()'),
+        server_default=text("gen_random_uuid()"),
     )
     data: MappedColumn[dict] = mapped_column(
         JSONB,

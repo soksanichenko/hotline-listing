@@ -19,11 +19,11 @@ def create_db_if_not_exists(sync_url: str) -> None:
 
     Table creation and migrations are handled exclusively by Alembic.
     """
-    logger.info('Checking database existence')
+    logger.info("Checking database existence")
     if not database_exists(sync_url):
-        logger.info('Database not found, creating')
+        logger.info("Database not found, creating")
         create_database(sync_url)
-        logger.info('Database created')
+        logger.info("Database created")
 
 
 def init_db(async_url: str) -> None:

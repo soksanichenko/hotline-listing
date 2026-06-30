@@ -4,7 +4,7 @@ import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID
 
@@ -18,53 +18,61 @@ from fastapi.templating import Jinja2Templates
 from .cache import Cache
 from .client import extract_path, fetch_chart
 from .config import AppConfig, ProductConfig
-from .db import config_create, config_get, config_update, create_db_if_not_exists, init_db
+from .db import (
+    config_create,
+    config_get,
+    config_update,
+    create_db_if_not_exists,
+    init_db,
+)
 from .models import ProductSummary
 
 logger = logging.getLogger(__name__)
 
 _ROOT = Path(__file__).parent.parent.parent
-_ROOT_PATH = os.getenv('ROOT_PATH', '')
-config = AppConfig.from_yaml(Path(os.getenv('CONFIG_PATH', 'config.yaml')))
+_ROOT_PATH = os.getenv("ROOT_PATH", "")
+config = AppConfig.from_yaml(Path(os.getenv("CONFIG_PATH", "config.yaml")))
 
-templates = Jinja2Templates(directory=_ROOT / 'templates')
+templates = Jinja2Templates(directory=_ROOT / "templates")
 _cache: Cache | None = None
 _http: httpx.AsyncClient | None = None
 
 
 # ── Jinja2 filters ────────────────────────────────────────────────────────────
 
+
 def _fmt_uah(value: float) -> str:
-    return f'{value:,.0f} ₴'.replace(',', ' ')
+    return f"{value:,.0f} ₴".replace(",", " ")
 
 
 def _fmt_usd(value: float) -> str:
-    return f'${value:,.2f}'
+    return f"${value:,.2f}"
 
 
 def _sparkline(prices: list[float]) -> str:
     if len(prices) < 2:
-        return ''
+        return ""
     mn, mx = min(prices), max(prices)
     rng = mx - mn or 1
     w, h = 90, 28
     pts = [
-        f'{i / (len(prices) - 1) * w:.1f},{h - (p - mn) / rng * (h - 4) - 2:.1f}'
+        f"{i / (len(prices) - 1) * w:.1f},{h - (p - mn) / rng * (h - 4) - 2:.1f}"
         for i, p in enumerate(prices)
     ]
-    return ' '.join(pts)
+    return " ".join(pts)
 
 
-templates.env.filters['uah'] = _fmt_uah
-templates.env.filters['usd'] = _fmt_usd
-templates.env.filters['sparkline'] = _sparkline
+templates.env.filters["uah"] = _fmt_uah
+templates.env.filters["usd"] = _fmt_usd
+templates.env.filters["sparkline"] = _sparkline
 # ROOT_PATH is set by the reverse proxy deployment (e.g., '/hotline-listing').
 # Empty string means the app is served at the root.
-templates.env.globals['root_path'] = os.getenv('ROOT_PATH', '')
-templates.env.globals['static_version'] = os.getenv('STATIC_VERSION', '')
+templates.env.globals["root_path"] = os.getenv("ROOT_PATH", "")
+templates.env.globals["static_version"] = os.getenv("STATIC_VERSION", "")
 
 
 # ── Lifespan ──────────────────────────────────────────────────────────────────
+
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -79,15 +87,16 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
-app.mount('/static', StaticFiles(directory=_ROOT / 'static'), name='static')
+app.mount("/static", StaticFiles(directory=_ROOT / "static"), name="static")
 
 
 # ── Shared helpers ────────────────────────────────────────────────────────────
 
+
 def _parse_hotline_date(ts: str) -> str:
     """Convert DD.MM.YYYY to ISO 8601 (YYYY-MM-DD) for JS Date parsing."""
     try:
-        return datetime.strptime(ts, '%d.%m.%Y').date().isoformat()
+        return datetime.strptime(ts, "%d.%m.%Y").date().isoformat()
     except (ValueError, TypeError):
         return ts
 
@@ -97,12 +106,12 @@ def _normalize_series(series: list) -> list:
 
 
 def _slug_to_title(path: str) -> str:
-    return path.replace('-', ' ').title()
+    return path.replace("-", " ").title()
 
 
 async def _get_product(product: ProductConfig) -> ProductSummary:
     path = extract_path(product.url)
-    chart_key = f'hotline:chart:{path}'
+    chart_key = f"hotline:chart:{path}"
 
     try:
         chart = await _cache.get(chart_key)
@@ -110,21 +119,23 @@ async def _get_product(product: ProductConfig) -> ProductSummary:
             chart = await fetch_chart(_http, path)
             await _cache.set(chart_key, chart)
     except Exception as exc:
-        logger.exception('Failed to fetch chart for %s', path)
+        logger.exception("Failed to fetch chart for %s", path)
         return ProductSummary(
             path=path,
             title=product.title or _slug_to_title(path),
             hotline_url=product.url,
-            price_uah=0, price_usd=0, quantity=0,
+            price_uah=0,
+            price_usd=0,
+            quantity=0,
             count=product.count,
             purchase_price=product.purchase_price,
             purchase_date=product.purchase_date,
             error=str(exc),
         )
 
-    uah_series = chart['priceUAH']
-    usd_series = chart['priceUSD']
-    qty_series  = chart['quantity']
+    uah_series = chart["priceUAH"]
+    usd_series = chart["priceUSD"]
+    qty_series = chart["quantity"]
 
     return ProductSummary(
         path=path,
@@ -132,7 +143,7 @@ async def _get_product(product: ProductConfig) -> ProductSummary:
         hotline_url=product.url,
         price_uah=uah_series[-1][1] if uah_series else 0,
         price_usd=usd_series[-1][1] if usd_series else 0,
-        quantity=qty_series[-1][1]  if qty_series  else 0,
+        quantity=qty_series[-1][1] if qty_series else 0,
         count=product.count,
         purchase_price=product.purchase_price,
         purchase_date=product.purchase_date,
@@ -142,29 +153,33 @@ async def _get_product(product: ProductConfig) -> ProductSummary:
 
 def _render_ctx(products: list[ProductSummary], request: Request, **extra) -> dict:
     ok = [p for p in products if not p.error]
-    diffs     = [p.total_diff    for p in ok if p.total_diff    is not None]
+    diffs = [p.total_diff for p in ok if p.total_diff is not None]
     purchases = [p.purchase_price * p.count for p in ok if p.purchase_price is not None]
     return {
-        'request':       request,
-        'products':      products,
-        'total_uah':     sum(p.total_uah for p in ok),
-        'total_usd':     sum(p.total_usd for p in ok),
-        'total_purchase': sum(purchases) if purchases else None,
-        'total_diff':    sum(diffs) if diffs else None,
-        'updated_at':    datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC'),
-        'cache_ttl_min': config.cache_ttl // 60,
+        "request": request,
+        "products": products,
+        "total_uah": sum(p.total_uah for p in ok),
+        "total_usd": sum(p.total_usd for p in ok),
+        "total_purchase": sum(purchases) if purchases else None,
+        "total_diff": sum(diffs) if diffs else None,
+        "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        "cache_ttl_min": config.cache_ttl // 60,
         **extra,
     }
 
 
 def _db_to_products(data: dict) -> list[ProductConfig]:
-    return [ProductConfig(**p) for p in data.get('products', [])]
+    return [ProductConfig(**p) for p in data.get("products", [])]
 
 
 def _products_to_db(products: list[ProductConfig]) -> dict:
     return {
-        'products': [
-            {k: v for k, v in p.model_dump(mode='json').items() if v is not None or k in ('url', 'count')}
+        "products": [
+            {
+                k: v
+                for k, v in p.model_dump(mode="json").items()
+                if v is not None or k in ("url", "count")
+            }
             for p in products
         ]
     }
@@ -172,103 +187,122 @@ def _products_to_db(products: list[ProductConfig]) -> dict:
 
 # ── Routes: landing ───────────────────────────────────────────────────────────
 
-@app.get('/', response_class=HTMLResponse)
+
+@app.get("/", response_class=HTMLResponse)
 async def landing(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse('landing.html', {'request': request})
+    return templates.TemplateResponse("landing.html", {"request": request})
 
 
-@app.post('/')
+@app.post("/")
 async def create_config() -> RedirectResponse:
     """Create an empty config and redirect to its editor."""
-    config_id = await config_create({'products': []})
-    return RedirectResponse(f'{_ROOT_PATH}/{config_id}/edit', status_code=303)
+    config_id = await config_create({"products": []})
+    return RedirectResponse(f"{_ROOT_PATH}/{config_id}/edit", status_code=303)
 
 
-@app.post('/import')
+@app.post("/import")
 async def import_yaml(file: UploadFile) -> RedirectResponse:
     """Parse an uploaded YAML config and store it as a new config."""
     raw = await file.read()
     try:
         data = yaml.safe_load(raw)
-        products = [ProductConfig(**p) if isinstance(p, dict) else ProductConfig(url=p)
-                    for p in data.get('products', []) if p]
+        products = [
+            ProductConfig(**p) if isinstance(p, dict) else ProductConfig(url=p)
+            for p in data.get("products", [])
+            if p
+        ]
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=f'Invalid YAML: {exc}')
+        raise HTTPException(status_code=400, detail=f"Invalid YAML: {exc}")
     config_id = await config_create(_products_to_db(products))
-    return RedirectResponse(f'{_ROOT_PATH}/{config_id}/edit', status_code=303)
+    return RedirectResponse(f"{_ROOT_PATH}/{config_id}/edit", status_code=303)
 
 
 # ── Routes: dashboard ─────────────────────────────────────────────────────────
 
-@app.get('/{config_id}', response_class=HTMLResponse)
+
+@app.get("/{config_id}", response_class=HTMLResponse)
 async def dashboard(config_id: UUID, request: Request) -> HTMLResponse:
     data = await config_get(config_id)
     if data is None:
-        raise HTTPException(status_code=404, detail='Config not found')
+        raise HTTPException(status_code=404, detail="Config not found")
 
     product_cfgs = _db_to_products(data)
     products = list(await asyncio.gather(*[_get_product(p) for p in product_cfgs]))
     ctx = _render_ctx(products, request, config_id=config_id)
-    return templates.TemplateResponse('dashboard.html', ctx)
+    return templates.TemplateResponse("dashboard.html", ctx)
 
 
 # ── Routes: chart ─────────────────────────────────────────────────────────────
 
-@app.get('/{config_id}/chart/{product_slug}', response_class=HTMLResponse)
-async def product_chart(config_id: UUID, product_slug: str, request: Request) -> HTMLResponse:
+
+@app.get("/{config_id}/chart/{product_slug}", response_class=HTMLResponse)
+async def product_chart(
+    config_id: UUID, product_slug: str, request: Request
+) -> HTMLResponse:
     data = await config_get(config_id)
     if data is None:
-        raise HTTPException(status_code=404, detail='Config not found')
+        raise HTTPException(status_code=404, detail="Config not found")
 
     product_cfgs = _db_to_products(data)
-    matched = next((p for p in product_cfgs if extract_path(p.url) == product_slug), None)
+    matched = next(
+        (p for p in product_cfgs if extract_path(p.url) == product_slug), None
+    )
     title = matched.title if matched and matched.title else _slug_to_title(product_slug)
     hotline_url = matched.url if matched else None
 
-    chart_key = f'hotline:chart:{product_slug}'
+    chart_key = f"hotline:chart:{product_slug}"
     try:
         chart = await _cache.get(chart_key)
         if chart is None:
             chart = await fetch_chart(_http, product_slug)
             await _cache.set(chart_key, chart)
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f'Failed to fetch chart data: {exc}')
+        raise HTTPException(
+            status_code=502, detail=f"Failed to fetch chart data: {exc}"
+        )
 
-    return templates.TemplateResponse('chart.html', {
-        'request': request,
-        'config_id': config_id,
-        'title': title,
-        'hotline_url': hotline_url,
-        'uah_series': _normalize_series(chart.get('priceUAH', [])),
-        'usd_series': _normalize_series(chart.get('priceUSD', [])),
-        'qty_series': chart.get('quantity', []),
-    })
+    return templates.TemplateResponse(
+        "chart.html",
+        {
+            "request": request,
+            "config_id": config_id,
+            "title": title,
+            "hotline_url": hotline_url,
+            "uah_series": _normalize_series(chart.get("priceUAH", [])),
+            "usd_series": _normalize_series(chart.get("priceUSD", [])),
+            "qty_series": chart.get("quantity", []),
+        },
+    )
 
 
 # ── Routes: editor ────────────────────────────────────────────────────────────
 
-@app.get('/{config_id}/edit', response_class=HTMLResponse)
+
+@app.get("/{config_id}/edit", response_class=HTMLResponse)
 async def edit_form(config_id: UUID, request: Request) -> HTMLResponse:
     data = await config_get(config_id)
     if data is None:
-        raise HTTPException(status_code=404, detail='Config not found')
+        raise HTTPException(status_code=404, detail="Config not found")
     products = _db_to_products(data)
-    return templates.TemplateResponse('edit.html', {
-        'request': request,
-        'config_id': config_id,
-        'products': products,
-    })
+    return templates.TemplateResponse(
+        "edit.html",
+        {
+            "request": request,
+            "config_id": config_id,
+            "products": products,
+        },
+    )
 
 
-@app.post('/{config_id}/save')
+@app.post("/{config_id}/save")
 async def save_config(config_id: UUID, request: Request) -> RedirectResponse:
     """Accept JSON body {products: [...]} and persist to DB."""
     body = await request.json()
     try:
-        products = [ProductConfig(**p) for p in body.get('products', [])]
+        products = [ProductConfig(**p) for p in body.get("products", [])]
     except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc))
     updated = await config_update(config_id, _products_to_db(products))
     if not updated:
-        raise HTTPException(status_code=404, detail='Config not found')
-    return RedirectResponse(f'{_ROOT_PATH}/{config_id}', status_code=303)
+        raise HTTPException(status_code=404, detail="Config not found")
+    return RedirectResponse(f"{_ROOT_PATH}/{config_id}", status_code=303)

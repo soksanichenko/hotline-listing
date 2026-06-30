@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from hotline_prices.config import AppConfig
 from hotline_prices.models_db import Base
 
-_app_config = AppConfig.from_yaml('config.yaml')
+_app_config = AppConfig.from_yaml("config.yaml")
 
 alembic_config = context.config
 if alembic_config.config_file_name is not None:
@@ -24,7 +24,7 @@ def run_migrations_offline() -> None:
         url=_app_config.async_database_url,
         target_metadata=target_metadata,
         literal_binds=True,
-        dialect_opts={'paramstyle': 'named'},
+        dialect_opts={"paramstyle": "named"},
     )
     with context.begin_transaction():
         context.run_migrations()
