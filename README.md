@@ -71,7 +71,7 @@ The app is deployed to `zelgray.work/hotline-listing/` via Ansible.
 
 # Run the playbook (requires INFISICAL_API_URL, INFISICAL_CLIENT_ID, INFISICAL_CLIENT_SECRET)
 cd ansible
-ansible-playbook -i inventories/zelgray.work playbooks/hotline-listing.yml
+ansible-playbook -i inventories/zelgray.work playbooks/deploy.yml
 ```
 
 The container is built on the target host from `sources/` synced by the playbook.

@@ -15,7 +15,7 @@ hotline-listing/
 │   │   └── group_vars/all.yml      # minimal: docker_network, nginx paths, postgres_password
 │   ├── playbooks/
 │   │   ├── pre_tasks/infisical.yml
-│   │   └── hotline-listing.yml
+│   │   └── deploy.yml
 │   └── roles/hotline-listing/      # syncs sources/, builds image, deploys container + nginx
 ├── config.yaml                     # products list only — infra fields use AppConfig defaults
 ├── install_dependencies.sh         # pip requirements.txt + ansible-galaxy + infisical CLI
@@ -154,7 +154,7 @@ All commands run from the **project root**; `config.yaml` is found in CWD.
 ```bash
 ./install_dependencies.sh
 cd ansible
-ansible-playbook -i inventories/zelgray.work playbooks/hotline-listing.yml
+ansible-playbook -i inventories/zelgray.work playbooks/deploy.yml
 ```
 
 Requires env: `INFISICAL_API_URL`, `INFISICAL_CLIENT_ID`, `INFISICAL_CLIENT_SECRET`.

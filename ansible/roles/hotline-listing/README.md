@@ -40,13 +40,13 @@ Deploys the hotline-listing FastAPI service as a Docker container on the target 
 
 ```bash
 cd ansible
-ansible-playbook -i inventories/zelgray.work playbooks/hotline-listing.yml
+ansible-playbook -i inventories/zelgray.work playbooks/deploy.yml
 ```
 
 Force image rebuild regardless of source changes:
 
 ```bash
-ansible-playbook -i inventories/zelgray.work playbooks/hotline-listing.yml \
+ansible-playbook -i inventories/zelgray.work playbooks/deploy.yml \
   -e docker_force_recreate=true
 ```
 
