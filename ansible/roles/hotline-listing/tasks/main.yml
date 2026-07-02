@@ -13,10 +13,13 @@
     src: "{{ hotline_listing_local_source_dir }}/sources/"
     dest: "{{ hotline_listing_data_dir }}/"
     delete: yes
+    owner: no
+    group: no
     rsync_opts:
       - "--exclude=__pycache__"
       - "--exclude=*.pyc"
       - "--exclude=.venv"
+      - "--exclude=config.yaml"
   become: yes
   register: _hotline_listing_source
   tags:
