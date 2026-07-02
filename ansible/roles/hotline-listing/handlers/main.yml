@@ -1,7 +1,7 @@
 ---
-- name: Restart Nginx container
-  community.docker.docker_container:
-    name: "{{ nginx_docker_container_name }}"
-    restart: yes
+- name: Reload nginx
+  community.docker.docker_container_exec:
+    container: "{{ nginx_docker_container_name }}"
+    command: nginx -s reload
   become: yes
 ...

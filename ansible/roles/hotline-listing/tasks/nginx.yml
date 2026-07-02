@@ -6,5 +6,5 @@
     mode: '0644'
   become: yes
   when: hotline_listing_nginx_proxy
-  notify: Restart Nginx container
+  notify: Reload nginx
 ...
