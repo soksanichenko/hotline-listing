@@ -52,7 +52,7 @@
   ansible.builtin.template:
     src: config.yaml.j2
     dest: "{{ hotline_listing_data_dir }}/config.yaml"
-    mode: '0644'
+    mode: '0600'
   become: yes
   tags:
     - hotline-listing
