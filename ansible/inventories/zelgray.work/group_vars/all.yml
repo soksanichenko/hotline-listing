@@ -9,6 +9,7 @@ nginx_docker_container_name: "nginx-server"
 nginx_volumes_path: "{{ docker_volumes_directory }}/nginx"
 nginx_confd_path: "{{ nginx_volumes_path }}/conf.d"
 nginx_domain_custom_locations_path: "{{ nginx_confd_path }}/zelgray.work-custom-locations"
+nginx_custom_upstream_path: "{{ nginx_confd_path }}/custom-upstream"
 
 postgresql_container_name: "postgresql"
 redis_container_name: "redis"

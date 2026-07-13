@@ -5,6 +5,7 @@ hotline_listing_http_port: 8999
 hotline_listing_data_dir: "{{ docker_volumes_directory }}/hotline-listing"
 hotline_listing_nginx_proxy: false
 hotline_listing_root_path: '/hotline-listing'
+hotline_listing_upstream_name: 'hotline_listing_upstream'
 
 # Path to the project on the Ansible controller — used to sync source before build.
 hotline_listing_local_source_dir: "{{ playbook_dir }}/../.."

@@ -5,7 +5,7 @@ location = /hotline-listing {
 
 location /hotline-listing/ {
     proxy_intercept_errors on;
-    proxy_pass http://{{ hotline_listing_container_name }}:{{ hotline_listing_http_port }}/;
+    proxy_pass http://{{ hotline_listing_upstream_name }}/;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $client_real_ip;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
