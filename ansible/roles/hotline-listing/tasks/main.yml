@@ -73,6 +73,8 @@
       STATIC_VERSION: "{{ _hotline_listing_static_version }}"
     volumes:
       - "{{ hotline_listing_data_dir }}/config.yaml:/app/config.yaml:ro"
+    labels:
+      monitoring.critical: "true"
   become: yes
   tags:
     - hotline-listing
