@@ -92,18 +92,18 @@ Table `configs` (PostgreSQL, managed by Alembic):
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| `fastapi` | 0.115.12 | Web framework |
-| `uvicorn` | 0.34.3 | ASGI server |
-| `sqlalchemy` | 2.0.41 | ORM + async engine |
+| `fastapi` | 0.139.2 | Web framework |
+| `uvicorn` | 0.51.0 | ASGI server |
+| `sqlalchemy` | 2.0.51 | ORM + async engine |
 | `psycopg[binary]` | 3.3.4 | PostgreSQL driver — sync and async, single package |
-| `alembic` | 1.16.2 | Schema migrations |
-| `sqlalchemy-utils` | 0.41.2 | `create_database` / `database_exists` |
-| `redis` | 5.2.1 | Async Redis client |
+| `alembic` | 1.18.5 | Schema migrations |
+| `sqlalchemy-utils` | 0.42.1 | `create_database` / `database_exists` |
+| `redis` | 8.0.1 | Async Redis client |
 | `httpx` | 0.28.1 | HTTP client for hotline.ua GraphQL |
-| `pydantic` | 2.11.5 | Config validation |
+| `pydantic` | 2.13.4 | Config validation |
 | `jinja2` | 3.1.6 | Server-side HTML templates |
-| `python-multipart` | 0.0.20 | YAML file upload (`/import`) |
-| `pyyaml` | 6.0.2 | Parse uploaded YAML configs |
+| `python-multipart` | 0.0.32 | YAML file upload (`/import`) |
+| `pyyaml` | 6.0.3 | Parse uploaded YAML configs |
 
 ## Architecture notes
 
@@ -124,6 +124,8 @@ Table `configs` (PostgreSQL, managed by Alembic):
 **config.yaml resolution** — `app.py` reads `Path(os.getenv('CONFIG_PATH', 'config.yaml'))`. When unset, this is relative to CWD. Run uvicorn and alembic from the project root so they find `config.yaml` there. In Docker, CWD is `/app` and the Ansible role mounts `config.yaml` at `/app/config.yaml`.
 
 **Sparklines** — SVG polyline generated server-side as a Jinja2 filter (`_sparkline`) over the last 60 price points from the chart API.
+
+**Template rendering** — `fastapi`'s pinned `starlette` transitive dependency requires the new `Jinja2Templates.TemplateResponse(request, name, context)` signature (request first). Calling it the old way (`TemplateResponse(name, context)`) silently misassigns the context dict as `name`, which crashes deep inside Jinja2's template cache lookup (`TypeError: unhashable type: 'dict'`).
 
 **Cache key** — `hotline:chart:{product-path-slug}`, TTL from `cache_ttl`.
 

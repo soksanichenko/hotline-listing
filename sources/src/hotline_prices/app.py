@@ -190,7 +190,7 @@ def _products_to_db(products: list[ProductConfig]) -> dict:
 
 @app.get("/", response_class=HTMLResponse)
 async def landing(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse("landing.html", {"request": request})
+    return templates.TemplateResponse(request, "landing.html", {"request": request})
 
 
 @app.post("/")
@@ -229,7 +229,7 @@ async def dashboard(config_id: UUID, request: Request) -> HTMLResponse:
     product_cfgs = _db_to_products(data)
     products = list(await asyncio.gather(*[_get_product(p) for p in product_cfgs]))
     ctx = _render_ctx(products, request, config_id=config_id)
-    return templates.TemplateResponse("dashboard.html", ctx)
+    return templates.TemplateResponse(request, "dashboard.html", ctx)
 
 
 # ── Routes: chart ─────────────────────────────────────────────────────────────
@@ -262,6 +262,7 @@ async def product_chart(
         )
 
     return templates.TemplateResponse(
+        request,
         "chart.html",
         {
             "request": request,
@@ -285,6 +286,7 @@ async def edit_form(config_id: UUID, request: Request) -> HTMLResponse:
         raise HTTPException(status_code=404, detail="Config not found")
     products = _db_to_products(data)
     return templates.TemplateResponse(
+        request,
         "edit.html",
         {
             "request": request,
