@@ -4,7 +4,7 @@ import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID
 
@@ -96,7 +96,7 @@ app.mount("/static", StaticFiles(directory=_ROOT / "static"), name="static")
 def _parse_hotline_date(ts: str) -> str:
     """Convert DD.MM.YYYY to ISO 8601 (YYYY-MM-DD) for JS Date parsing."""
     try:
-        return datetime.strptime(ts, "%d.%m.%Y").date().isoformat()
+        return datetime.strptime(ts, "%d.%m.%Y").replace(tzinfo=UTC).date().isoformat()
     except (ValueError, TypeError):
         return ts
 
@@ -162,7 +162,7 @@ def _render_ctx(products: list[ProductSummary], request: Request, **extra) -> di
         "total_usd": sum(p.total_usd for p in ok),
         "total_purchase": sum(purchases) if purchases else None,
         "total_diff": sum(diffs) if diffs else None,
-        "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        "updated_at": datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
         "cache_ttl_min": config.cache_ttl // 60,
         **extra,
     }
@@ -212,6 +212,7 @@ async def import_yaml(file: UploadFile) -> RedirectResponse:
             if p
         ]
     except Exception as exc:
+        logger.exception("Failed to parse uploaded YAML config")
         raise HTTPException(status_code=400, detail=f"Invalid YAML: {exc}")
     config_id = await config_create(_products_to_db(products))
     return RedirectResponse(f"{_ROOT_PATH}/{config_id}/edit", status_code=303)
@@ -257,6 +258,7 @@ async def product_chart(
             chart = await fetch_chart(_http, product_slug)
             await _cache.set(chart_key, chart)
     except Exception as exc:
+        logger.exception("Failed to fetch chart data for %s", product_slug)
         raise HTTPException(
             status_code=502, detail=f"Failed to fetch chart data: {exc}"
         )
@@ -303,6 +305,7 @@ async def save_config(config_id: UUID, request: Request) -> RedirectResponse:
     try:
         products = [ProductConfig(**p) for p in body.get("products", [])]
     except Exception as exc:
+        logger.exception("Invalid product data for config %s", config_id)
         raise HTTPException(status_code=422, detail=str(exc))
     updated = await config_update(config_id, _products_to_db(products))
     if not updated:

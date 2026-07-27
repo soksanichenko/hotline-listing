@@ -4,11 +4,10 @@ import asyncio
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import create_async_engine
-
 from hotline_prices.config import AppConfig
 from hotline_prices.models_db import Base
+from sqlalchemy.engine import Connection
+from sqlalchemy.ext.asyncio import create_async_engine
 
 _app_config = AppConfig.from_yaml("config.yaml")
 
