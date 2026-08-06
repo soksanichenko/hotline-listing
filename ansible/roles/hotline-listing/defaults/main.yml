@@ -8,8 +8,12 @@ hotline_listing_root_path: '/hotline-listing'
 hotline_listing_upstream_name: 'hotline_listing_upstream'
 
 # Discord SSO gate (meow-elite-club-portal): nginx upstream name for the
-# portal's /auth and /bridge/consume endpoints (see nginx-location.conf.j2).
+# portal's /auth and /bridge/consume endpoints, and the X-Service-Slug this
+# service is registered under via /admin/services (see
+# nginx-location.conf.j2). Must match the `slug` of the GatedService row an
+# admin creates for this service — a mismatch fails every request closed.
 meow_elite_club_portal_upstream_name: 'meow_elite_club_portal_upstream'
+hotline_listing_service_slug: 'hotline-listing'
 
 # Path to the project on the Ansible controller — used to sync source before build.
 hotline_listing_local_source_dir: "{{ playbook_dir }}/../.."

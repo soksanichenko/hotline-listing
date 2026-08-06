@@ -58,6 +58,7 @@ location = /internal/zw-auth {
     proxy_pass_request_body off;
     proxy_set_header Content-Length "";
     proxy_set_header Cookie $http_cookie;
+    proxy_set_header X-Service-Slug "{{ hotline_listing_service_slug }}";
 }
 
 location = /internal/bridge {
