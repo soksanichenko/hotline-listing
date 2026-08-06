@@ -3,6 +3,46 @@ location = /hotline-listing {
     return 301 /hotline-listing/;
 }
 
+# Discord SSO gate (meow-elite-club-portal) on list creation/editing only —
+# see docs/portal-architecture.md in infra for the full cross-domain bridge
+# flow. The read-only per-config dashboard below (`/hotline-listing/{id}`,
+# `/hotline-listing/{id}/chart/...`) is intentionally left open: the UUID
+# itself is the share link's access token, and gating it would break
+# sharing a dashboard with someone outside the Discord allow-list.
+
+location = /hotline-listing/ {
+    auth_request /internal/zw-auth;
+    error_page 401 = @zw_login;
+    proxy_intercept_errors on;
+    proxy_pass http://{{ hotline_listing_upstream_name }}/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $client_real_ip;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+
+location = /hotline-listing/import {
+    auth_request /internal/zw-auth;
+    error_page 401 = @zw_login;
+    proxy_pass http://{{ hotline_listing_upstream_name }}/import;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $client_real_ip;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+
+location ~ ^/hotline-listing/[^/]+/(edit|save)$ {
+    auth_request /internal/zw-auth;
+    error_page 401 = @zw_login;
+    rewrite ^/hotline-listing/(.*)$ /$1 break;
+    proxy_pass http://{{ hotline_listing_upstream_name }};
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $client_real_ip;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+
+# Ungated: read-only dashboard view + chart data.
 location /hotline-listing/ {
     proxy_intercept_errors on;
     proxy_pass http://{{ hotline_listing_upstream_name }}/;
@@ -10,4 +50,29 @@ location /hotline-listing/ {
     proxy_set_header X-Real-IP $client_real_ip;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
+}
+
+location = /internal/zw-auth {
+    internal;
+    proxy_pass http://{{ meow_elite_club_portal_upstream_name }}/auth;
+    proxy_pass_request_body off;
+    proxy_set_header Content-Length "";
+    proxy_set_header Cookie $http_cookie;
+}
+
+location = /internal/bridge {
+    proxy_pass http://{{ meow_elite_club_portal_upstream_name }}/bridge/consume;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $client_real_ip;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header Cookie $http_cookie;
+}
+
+location @zw_login {
+    # $request_uri (not $uri) — the edit/save location's `rewrite ... break`
+    # mutates $uri before this error_page fires; $request_uri is immutable
+    # and always holds the original path, so the login redirect keeps the
+    # /hotline-listing prefix.
+    return 302 https://meow-elite.club/login?next=$scheme://$host$request_uri;
 }

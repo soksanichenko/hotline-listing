@@ -28,6 +28,7 @@ Deploys the hotline-listing FastAPI service as a Docker container on the target 
 | `hotline_listing_redis_url` | `redis://{{ redis_container_name }}:6379` | Redis URL written into config.yaml |
 | `hotline_listing_cache_ttl` | `3600` | Chart cache TTL in seconds |
 | `hotline_listing_city_id` | `154` | City ID (Kyiv) |
+| `meow_elite_club_portal_upstream_name` | `meow_elite_club_portal_upstream` | Nginx upstream name for the Discord SSO gate's `/auth` and `/bridge/consume` endpoints |
 
 ## Tags
 
@@ -56,3 +57,4 @@ ansible-playbook -i inventories/zelgray.work playbooks/deploy.yml \
 - The PostgreSQL database (`hotline_prices`) is created automatically at container startup via `sqlalchemy_utils`. Alembic migrations also run automatically on every container start via `entrypoint.sh` — no manual step needed.
 - The image is built on the **target host** from `sources/` synced by this role. It is not pulled from a registry.
 - `hotline_listing_nginx_proxy` is `false` by default — set it in `group_vars/all.yml` to enable nginx integration.
+- List creation/editing (`/hotline-listing/`, `/hotline-listing/import`, `/hotline-listing/{id}/edit`, `/hotline-listing/{id}/save`) is gated behind the Discord SSO gate (`meow-elite-club-portal`, `auth_request` + `/internal/bridge`, see `docs/portal-architecture.md` in `infra`). The read-only per-config dashboard (`/hotline-listing/{id}`, `/hotline-listing/{id}/chart/...`) is intentionally left open — the UUID is the share link's access token, and gating it would break sharing a dashboard with someone outside the allow-list.
