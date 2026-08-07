@@ -95,6 +95,20 @@ async def config_delete(config_id: UUID) -> bool:
         return result.scalar_one_or_none() is not None
 
 
+async def config_claim(config_id: UUID, owner_discord_user_id: str) -> bool:
+    """Set the owner if the row is currently unowned. Returns True if this
+    call claimed it (False if it was already owned, by anyone, by then)."""
+    async with get_session() as session:
+        result = await session.execute(
+            update(Config)
+            .where(Config.id == config_id, Config.owner_discord_user_id.is_(None))
+            .values(owner_discord_user_id=owner_discord_user_id)
+            .returning(Config.id)
+        )
+        await session.commit()
+        return result.scalar_one_or_none() is not None
+
+
 async def configs_list_for_owner(owner_discord_user_id: str) -> list[dict]:
     """Return configs owned by the given Discord user, newest first."""
     async with get_session() as session:

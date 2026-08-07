@@ -87,6 +87,15 @@
       <button class="btn-link" type="button" onclick="copyUrl()"><span data-i18n="copy_url">Скопіювати</span></button>
     </div>
   </div>
+
+  {% if unclaimed %}
+  <div class="section" style="margin-top:1.5rem">
+    <p style="color:var(--text-muted);margin-bottom:0.75rem" data-i18n="unclaimed_hint">Ця таблиця ще не прив'язана — будь-хто з доступом може її редагувати, і вона не потрапляє у "Мої таблиці". Прив'яжи її до себе, щоб бачити в своєму списку та обмежити редагування лише собою.</p>
+    <form method="post" action="{{ root_path }}/{{ config_id }}/claim">
+      <button class="btn-link" type="submit" data-i18n="claim_table">Прив'язати до себе</button>
+    </form>
+  </div>
+  {% endif %}
 </main>
 
 <script src="{{ root_path }}/static/i18n.js?v={{ static_version }}"></script>

@@ -19,6 +19,7 @@ from .cache import Cache
 from .client import extract_path, fetch_chart
 from .config import AppConfig, ProductConfig
 from .db import (
+    config_claim,
     config_create,
     config_delete,
     config_get,
@@ -175,16 +176,18 @@ def _db_to_products(data: dict) -> list[ProductConfig]:
     return [ProductConfig(**p) for p in data.get("products", [])]
 
 
-async def _require_owner(config_id: UUID, request: Request) -> None:
+async def _require_owner(config_id: UUID, request: Request) -> bool:
     """Raise 404 if the config doesn't exist, 403 if it's owned by someone
     else. Legacy configs created before ownership tracking existed have no
     owner recorded and remain open to any Discord-authenticated user.
+    Returns True if the config is unowned (claimable).
     """
     exists, owner = await config_get_owner(config_id)
     if not exists:
         raise HTTPException(status_code=404, detail="Config not found")
     if owner is not None and owner != request.headers.get("X-Discord-User-Id"):
         raise HTTPException(status_code=403, detail="Not the owner of this config")
+    return owner is None
 
 
 def _products_to_db(products: list[ProductConfig]) -> dict:
@@ -334,7 +337,7 @@ async def product_chart(
 
 @app.get("/{config_id}/edit", response_class=HTMLResponse)
 async def edit_form(config_id: UUID, request: Request) -> HTMLResponse:
-    await _require_owner(config_id, request)
+    unclaimed = await _require_owner(config_id, request)
     data = await config_get(config_id)
     if data is None:
         raise HTTPException(status_code=404, detail="Config not found")
@@ -347,8 +350,19 @@ async def edit_form(config_id: UUID, request: Request) -> HTMLResponse:
             "config_id": config_id,
             "products": products,
             "avatar_url": request.headers.get("X-Discord-Avatar-Url"),
+            "unclaimed": unclaimed,
         },
     )
+
+
+@app.post("/{config_id}/claim")
+async def claim_config(config_id: UUID, request: Request) -> RedirectResponse:
+    """Bind an existing unowned (legacy) config to the requesting Discord
+    user, so it starts showing up in their "my tables" list. No-op if it's
+    already owned by them; 403 if owned by someone else."""
+    await _require_owner(config_id, request)
+    await config_claim(config_id, request.headers.get("X-Discord-User-Id"))
+    return RedirectResponse(f"{_ROOT_PATH}/{config_id}/edit", status_code=303)
 
 
 @app.post("/{config_id}/save")
