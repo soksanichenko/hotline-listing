@@ -1,6 +1,6 @@
 # hotline-listing
 
-Multi-tenant price-tracking dashboard for hotline.ua. Each user gets a UUID-based URL — no registration required. The UUID is the access token.
+Multi-tenant price-tracking dashboard for hotline.ua. Each user gets a UUID-based URL — no registration required. The UUID is the access token for the read-only dashboard/chart views (deliberately left open behind the Discord gate, so a share link works for anyone).
 
 ## Features
 
@@ -10,6 +10,7 @@ Multi-tenant price-tracking dashboard for hotline.ua. Each user gets a UUID-base
 - **YAML import** — upload an existing `config.yaml` to populate a new dashboard
 - **Caching** — chart data is cached in Redis per product (default 1 hour)
 - **i18n** — UI language toggle: Ukrainian / English / Russian (persisted in localStorage)
+- **"My tables"** — configs are tied server-side to the creating Discord user (`owner_discord_user_id`, via `X-Discord-User-Id` forwarded by the nginx gate on `/`, `/import`, and the `/{id}/edit|save|delete` locations); the landing page lists them from the DB, so they follow you across browsers/devices instead of a per-browser `localStorage` list. `/{id}/edit` and `/{id}/save` are owner-only (403 otherwise); the ✕ button on the landing page really deletes the config. Configs created before this existed have no recorded owner and remain open to any Discord-authenticated user, same as before.
 
 ## Requirements
 

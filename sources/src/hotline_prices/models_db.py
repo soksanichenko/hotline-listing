@@ -1,6 +1,6 @@
 """SQLAlchemy ORM models (used by Alembic for autogenerate)."""
 
-from sqlalchemy import DateTime, func, text
+from sqlalchemy import DateTime, String, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, MappedColumn, mapped_column
 
@@ -23,6 +23,11 @@ class Config(Base):
         JSONB,
         nullable=False,
         server_default=text("'{\"products\": []}'::jsonb"),
+    )
+    owner_discord_user_id: MappedColumn[str | None] = mapped_column(
+        String,
+        nullable=True,
+        index=True,
     )
     created_at: MappedColumn[DateTime] = mapped_column(
         DateTime(timezone=True),

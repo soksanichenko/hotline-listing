@@ -20,8 +20,11 @@ from .client import extract_path, fetch_chart
 from .config import AppConfig, ProductConfig
 from .db import (
     config_create,
+    config_delete,
     config_get,
+    config_get_owner,
     config_update,
+    configs_list_for_owner,
     create_db_if_not_exists,
     init_db,
 )
@@ -172,6 +175,18 @@ def _db_to_products(data: dict) -> list[ProductConfig]:
     return [ProductConfig(**p) for p in data.get("products", [])]
 
 
+async def _require_owner(config_id: UUID, request: Request) -> None:
+    """Raise 404 if the config doesn't exist, 403 if it's owned by someone
+    else. Legacy configs created before ownership tracking existed have no
+    owner recorded and remain open to any Discord-authenticated user.
+    """
+    exists, owner = await config_get_owner(config_id)
+    if not exists:
+        raise HTTPException(status_code=404, detail="Config not found")
+    if owner is not None and owner != request.headers.get("X-Discord-User-Id"):
+        raise HTTPException(status_code=403, detail="Not the owner of this config")
+
+
 def _products_to_db(products: list[ProductConfig]) -> dict:
     return {
         "products": [
@@ -190,26 +205,35 @@ def _products_to_db(products: list[ProductConfig]) -> dict:
 
 @app.get("/", response_class=HTMLResponse)
 async def landing(request: Request) -> HTMLResponse:
+    discord_user_id = request.headers.get("X-Discord-User-Id")
+    my_configs = (
+        await configs_list_for_owner(discord_user_id) if discord_user_id else []
+    )
     return templates.TemplateResponse(
         request,
         "landing.html",
         {
             "request": request,
             "avatar_url": request.headers.get("X-Discord-Avatar-Url"),
+            "my_configs": my_configs,
         },
     )
 
 
 @app.post("/")
-async def create_config() -> RedirectResponse:
-    """Create an empty config and redirect to its editor."""
-    config_id = await config_create({"products": []})
+async def create_config(request: Request) -> RedirectResponse:
+    """Create an empty config, owned by the requesting Discord user, and
+    redirect to its editor."""
+    config_id = await config_create(
+        {"products": []}, owner_discord_user_id=request.headers.get("X-Discord-User-Id")
+    )
     return RedirectResponse(f"{_ROOT_PATH}/{config_id}/edit", status_code=303)
 
 
 @app.post("/import")
-async def import_yaml(file: UploadFile) -> RedirectResponse:
-    """Parse an uploaded YAML config and store it as a new config."""
+async def import_yaml(file: UploadFile, request: Request) -> RedirectResponse:
+    """Parse an uploaded YAML config and store it as a new config, owned by
+    the requesting Discord user."""
     raw = await file.read()
     try:
         data = yaml.safe_load(raw)
@@ -221,7 +245,10 @@ async def import_yaml(file: UploadFile) -> RedirectResponse:
     except Exception as exc:
         logger.exception("Failed to parse uploaded YAML config")
         raise HTTPException(status_code=400, detail=f"Invalid YAML: {exc}")
-    config_id = await config_create(_products_to_db(products))
+    config_id = await config_create(
+        _products_to_db(products),
+        owner_discord_user_id=request.headers.get("X-Discord-User-Id"),
+    )
     return RedirectResponse(f"{_ROOT_PATH}/{config_id}/edit", status_code=303)
 
 
@@ -307,6 +334,7 @@ async def product_chart(
 
 @app.get("/{config_id}/edit", response_class=HTMLResponse)
 async def edit_form(config_id: UUID, request: Request) -> HTMLResponse:
+    await _require_owner(config_id, request)
     data = await config_get(config_id)
     if data is None:
         raise HTTPException(status_code=404, detail="Config not found")
@@ -326,6 +354,7 @@ async def edit_form(config_id: UUID, request: Request) -> HTMLResponse:
 @app.post("/{config_id}/save")
 async def save_config(config_id: UUID, request: Request) -> RedirectResponse:
     """Accept JSON body {products: [...]} and persist to DB."""
+    await _require_owner(config_id, request)
     body = await request.json()
     try:
         products = [ProductConfig(**p) for p in body.get("products", [])]
@@ -336,3 +365,12 @@ async def save_config(config_id: UUID, request: Request) -> RedirectResponse:
     if not updated:
         raise HTTPException(status_code=404, detail="Config not found")
     return RedirectResponse(f"{_ROOT_PATH}/{config_id}", status_code=303)
+
+
+@app.post("/{config_id}/delete")
+async def delete_config(config_id: UUID, request: Request) -> RedirectResponse:
+    """Delete a config. Owner-only (unowned legacy configs are open to any
+    Discord-authenticated user, same rule as edit/save)."""
+    await _require_owner(config_id, request)
+    await config_delete(config_id)
+    return RedirectResponse(f"{_ROOT_PATH}/", status_code=303)

@@ -54,44 +54,25 @@
     </div>
   </div>
 
-  <div class="section" id="recent-section" style="display:none;margin-top:1.5rem">
+  {% if my_configs %}
+  <div class="section" id="recent-section" style="margin-top:1.5rem">
     <h2 data-i18n="my_tables">Мої таблиці</h2>
-    <div id="recent-list" style="display:flex;flex-direction:column;gap:0.5rem"></div>
+    <div id="recent-list" style="display:flex;flex-direction:column;gap:0.5rem">
+      {% for cfg in my_configs %}
+      <div style="display:flex;align-items:center;gap:0.75rem">
+        <a class="btn-link" href="{{ root_path }}/{{ cfg.id }}" style="font-family:monospace;font-size:0.8rem">{{ cfg.id }}</a>
+        <a class="btn-link" href="{{ root_path }}/{{ cfg.id }}/edit" data-i18n="edit">Редагувати</a>
+        <form method="post" action="{{ root_path }}/{{ cfg.id }}/delete" onsubmit="return confirm(t('confirm_delete'))">
+          <button class="btn-link" type="submit" style="border-color:transparent;color:var(--text-muted)" data-i18n-title="remove" title="Видалити">✕</button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
   </div>
+  {% endif %}
 </main>
 
 <script src="{{ root_path }}/static/i18n.js?v={{ static_version }}"></script>
-<script>
-const ROOT_PATH = '{{ root_path }}';
-
-function loadRecent() {
-  const ids = JSON.parse(localStorage.getItem('hotline_configs') || '[]');
-  const section = document.getElementById('recent-section');
-  const list = document.getElementById('recent-list');
-  if (!ids.length) { section.style.display = 'none'; return; }
-  section.style.display = '';
-  list.innerHTML = '';
-  ids.slice().reverse().forEach(id => {
-    const row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:0.75rem';
-    row.innerHTML = `
-      <a class="btn-link" href="${ROOT_PATH}/${id}" style="font-family:monospace;font-size:0.8rem">${id}</a>
-      <a class="btn-link" href="${ROOT_PATH}/${id}/edit">${t('edit')}</a>
-      <button class="btn-link" style="border-color:transparent;color:var(--text-muted)" onclick="removeConfig('${id}')" title="${t('remove')}">✕</button>`;
-    list.appendChild(row);
-  });
-}
-
-function removeConfig(id) {
-  const ids = JSON.parse(localStorage.getItem('hotline_configs') || '[]');
-  localStorage.setItem('hotline_configs', JSON.stringify(ids.filter(x => x !== id)));
-  loadRecent();
-}
-
-function onLangChange() { loadRecent(); }
-
-loadRecent();
-</script>
 
 </body>
 </html>

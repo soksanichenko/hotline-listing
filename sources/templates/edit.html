@@ -97,14 +97,6 @@ const ROOT_PATH = '{{ root_path }}';
 document.getElementById('share-url').textContent =
   window.location.origin + ROOT_PATH + '/' + CONFIG_ID;
 
-(function remember() {
-  const ids = JSON.parse(localStorage.getItem('hotline_configs') || '[]');
-  if (!ids.includes(CONFIG_ID)) {
-    ids.push(CONFIG_ID);
-    localStorage.setItem('hotline_configs', JSON.stringify(ids));
-  }
-})();
-
 const EMPTY_ROW = `
 <div class="product-row">
   <div class="row-fields">

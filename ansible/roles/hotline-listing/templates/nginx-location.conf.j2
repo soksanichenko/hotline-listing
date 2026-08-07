@@ -13,6 +13,7 @@ location = /hotline-listing {
 location = /hotline-listing/ {
     auth_request /internal/zw-auth;
     auth_request_set $discord_avatar_url $upstream_http_x_discord_avatar_url;
+    auth_request_set $discord_user_id $upstream_http_x_discord_user_id;
     error_page 401 = @zw_login;
     proxy_intercept_errors on;
     proxy_pass http://{{ hotline_listing_upstream_name }}/;
@@ -21,16 +22,19 @@ location = /hotline-listing/ {
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
     proxy_set_header X-Discord-Avatar-Url $discord_avatar_url;
+    proxy_set_header X-Discord-User-Id $discord_user_id;
 }
 
 location = /hotline-listing/import {
     auth_request /internal/zw-auth;
+    auth_request_set $discord_user_id $upstream_http_x_discord_user_id;
     error_page 401 = @zw_login;
     proxy_pass http://{{ hotline_listing_upstream_name }}/import;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $client_real_ip;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Discord-User-Id $discord_user_id;
 }
 
 # Ungated: just clears a cookie, nothing to protect — see app.py's /logout.
@@ -42,9 +46,10 @@ location = /hotline-listing/logout {
     proxy_set_header X-Forwarded-Proto $scheme;
 }
 
-location ~ ^/hotline-listing/[^/]+/(edit|save)$ {
+location ~ ^/hotline-listing/[^/]+/(edit|save|delete)$ {
     auth_request /internal/zw-auth;
     auth_request_set $discord_avatar_url $upstream_http_x_discord_avatar_url;
+    auth_request_set $discord_user_id $upstream_http_x_discord_user_id;
     error_page 401 = @zw_login;
     rewrite ^/hotline-listing/(.*)$ /$1 break;
     proxy_pass http://{{ hotline_listing_upstream_name }};
@@ -53,6 +58,7 @@ location ~ ^/hotline-listing/[^/]+/(edit|save)$ {
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
     proxy_set_header X-Discord-Avatar-Url $discord_avatar_url;
+    proxy_set_header X-Discord-User-Id $discord_user_id;
 }
 
 # Ungated: read-only dashboard view + chart data.
