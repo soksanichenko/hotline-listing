@@ -77,6 +77,40 @@ header {
 .lang-selector select:hover,
 .lang-selector select:focus { border-color: var(--accent); }
 
+.user-menu {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.25rem 0.4rem 0.25rem 0.25rem;
+}
+
+.user-menu img,
+.user-menu .avatar-placeholder {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: block;
+    flex-shrink: 0;
+}
+
+.user-menu .avatar-placeholder { background: var(--border); }
+
+.user-menu form { margin: 0; }
+
+.user-menu button {
+    background: transparent;
+    border: none;
+    padding: 0.2rem 0.3rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.user-menu button:hover { color: var(--text); }
+
 /* ── Layout ──────────────────────────────────────────────────────────────── */
 
 main {

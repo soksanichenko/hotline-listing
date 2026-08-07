@@ -23,6 +23,7 @@ const i18n = {
         import_yaml:      'Імпортувати YAML',
         my_tables:        'Мої таблиці',
         remove:           'Видалити',
+        logout:           'Вийти',
         // editor
         to_table:             'До таблиці',
         section_products:     'Список товарів',
@@ -63,6 +64,7 @@ const i18n = {
         import_yaml:      'Import YAML',
         my_tables:        'My tables',
         remove:           'Remove',
+        logout:           'Log out',
         to_table:             'Back to table',
         section_products:     'Product list',
         section_share:        'Table link',
@@ -101,6 +103,7 @@ const i18n = {
         import_yaml:      'Импортировать YAML',
         my_tables:        'Мои таблицы',
         remove:           'Удалить',
+        logout:           'Выйти',
         to_table:             'К таблице',
         section_products:     'Список товаров',
         section_share:        'Ссылка на таблицу',

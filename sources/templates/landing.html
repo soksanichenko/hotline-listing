@@ -18,6 +18,16 @@
         <option value="ru">🇷🇺 RU</option>
       </select>
     </div>
+    <div class="user-menu">
+      {% if avatar_url %}
+      <img src="{{ avatar_url }}" alt="">
+      {% else %}
+      <span class="avatar-placeholder"></span>
+      {% endif %}
+      <form action="{{ root_path }}/logout" method="post">
+        <button type="submit" data-i18n="logout">Log out</button>
+      </form>
+    </div>
   </div>
 </header>
 

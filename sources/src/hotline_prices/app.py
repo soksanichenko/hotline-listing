@@ -190,7 +190,14 @@ def _products_to_db(products: list[ProductConfig]) -> dict:
 
 @app.get("/", response_class=HTMLResponse)
 async def landing(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse(request, "landing.html", {"request": request})
+    return templates.TemplateResponse(
+        request,
+        "landing.html",
+        {
+            "request": request,
+            "avatar_url": request.headers.get("X-Discord-Avatar-Url"),
+        },
+    )
 
 
 @app.post("/")
@@ -216,6 +223,23 @@ async def import_yaml(file: UploadFile) -> RedirectResponse:
         raise HTTPException(status_code=400, detail=f"Invalid YAML: {exc}")
     config_id = await config_create(_products_to_db(products))
     return RedirectResponse(f"{_ROOT_PATH}/{config_id}/edit", status_code=303)
+
+
+@app.post("/logout")
+async def logout() -> RedirectResponse:
+    """Clears the Discord-bridged `zw_session` cookie the portal set on
+    zelgray.work — a purely local action, not a real Discord logout: this
+    app has no session of its own to clear (no local login exists here at
+    all), and as long as `portal_session` is still valid on
+    meow-elite.club, the very next Discord-gated page load re-bridges a
+    fresh `zw_session` automatically. Same cookie every zelgray.work-rooted
+    gated service shares, so this also affects any of them open in the
+    same browser — not a bug, that's the point of a root-domain-scoped
+    session.
+    """
+    response = RedirectResponse(f"{_ROOT_PATH}/", status_code=303)
+    response.delete_cookie("zw_session", domain="zelgray.work", path="/")
+    return response
 
 
 # ── Routes: dashboard ─────────────────────────────────────────────────────────
@@ -294,6 +318,7 @@ async def edit_form(config_id: UUID, request: Request) -> HTMLResponse:
             "request": request,
             "config_id": config_id,
             "products": products,
+            "avatar_url": request.headers.get("X-Discord-Avatar-Url"),
         },
     )
 

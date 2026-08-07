@@ -12,6 +12,7 @@ location = /hotline-listing {
 
 location = /hotline-listing/ {
     auth_request /internal/zw-auth;
+    auth_request_set $discord_avatar_url $upstream_http_x_discord_avatar_url;
     error_page 401 = @zw_login;
     proxy_intercept_errors on;
     proxy_pass http://{{ hotline_listing_upstream_name }}/;
@@ -19,6 +20,7 @@ location = /hotline-listing/ {
     proxy_set_header X-Real-IP $client_real_ip;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Discord-Avatar-Url $discord_avatar_url;
 }
 
 location = /hotline-listing/import {
@@ -31,8 +33,18 @@ location = /hotline-listing/import {
     proxy_set_header X-Forwarded-Proto $scheme;
 }
 
+# Ungated: just clears a cookie, nothing to protect — see app.py's /logout.
+location = /hotline-listing/logout {
+    proxy_pass http://{{ hotline_listing_upstream_name }}/logout;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $client_real_ip;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+
 location ~ ^/hotline-listing/[^/]+/(edit|save)$ {
     auth_request /internal/zw-auth;
+    auth_request_set $discord_avatar_url $upstream_http_x_discord_avatar_url;
     error_page 401 = @zw_login;
     rewrite ^/hotline-listing/(.*)$ /$1 break;
     proxy_pass http://{{ hotline_listing_upstream_name }};
@@ -40,6 +52,7 @@ location ~ ^/hotline-listing/[^/]+/(edit|save)$ {
     proxy_set_header X-Real-IP $client_real_ip;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Discord-Avatar-Url $discord_avatar_url;
 }
 
 # Ungated: read-only dashboard view + chart data.
