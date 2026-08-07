@@ -16,4 +16,19 @@
   become: yes
   when: hotline_listing_nginx_proxy
   notify: Reload nginx
+
+- name: Register hotline-listing with the Discord SSO portal
+  ansible.builtin.uri:
+    url: https://meow-elite.club/api/services/register
+    method: POST
+    headers:
+      Authorization: "Bearer {{ meow_elite_club_portal_service_registration_token }}"
+    body_format: json
+    body:
+      slug: "{{ hotline_listing_service_slug }}"
+      name: "Hotline.ua price listing"
+      url: "https://{{ cf_zone_domain }}{{ hotline_listing_root_path }}/"
+    status_code: [200]
+  when: hotline_listing_nginx_proxy
+  no_log: true
 ...

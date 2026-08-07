@@ -29,7 +29,8 @@ Deploys the hotline-listing FastAPI service as a Docker container on the target 
 | `hotline_listing_cache_ttl` | `3600` | Chart cache TTL in seconds |
 | `hotline_listing_city_id` | `154` | City ID (Kyiv) |
 | `meow_elite_club_portal_upstream_name` | `meow_elite_club_portal_upstream` | Nginx upstream name for the Discord SSO gate's `/auth` and `/bridge/consume` endpoints |
-| `hotline_listing_service_slug` | `hotline-listing` | `X-Service-Slug` sent to `/auth` — must match the `slug` of the `GatedService` row created for this service via `/admin/services` |
+| `hotline_listing_service_slug` | `hotline-listing` | `X-Service-Slug` sent to `/auth`; also the `slug` this role self-registers as its `GatedService` row |
+| `meow_elite_club_portal_service_registration_token` | *(from Infisical `/hosts/shared` `meow-elite-club-portal-service-registration-token`)* | Bearer token for `POST /api/services/register` |
 
 ## Tags
 
@@ -59,4 +60,4 @@ ansible-playbook -i inventories/zelgray.work playbooks/deploy.yml \
 - The image is built on the **target host** from `sources/` synced by this role. It is not pulled from a registry.
 - `hotline_listing_nginx_proxy` is `false` by default — set it in `group_vars/all.yml` to enable nginx integration.
 - List creation/editing (`/hotline-listing/`, `/hotline-listing/import`, `/hotline-listing/{id}/edit`, `/hotline-listing/{id}/save`) is gated behind the Discord SSO gate (`meow-elite-club-portal`, `auth_request` + `/internal/bridge`, see `docs/portal-architecture.md` in `infra`). The read-only per-config dashboard (`/hotline-listing/{id}`, `/hotline-listing/{id}/chart/...`) is intentionally left open — the UUID is the share link's access token, and gating it would break sharing a dashboard with someone outside the allow-list.
-- The gate enforces per-service access, not just "any valid Discord session": a `GatedService(slug="hotline-listing")` row and at least one `ServiceAccess` grant (individual Discord user or guild) must exist, created through the portal's `/admin/services` — nothing here seeds them automatically.
+- The gate enforces per-service access, not just "any valid Discord session": a `GatedService(slug="hotline-listing")` row and at least one `ServiceAccess` grant (individual Discord user or guild) must exist. The `GatedService` row is created/updated automatically on every deploy (`POST /api/services/register`, Bearer-token auth — see `meow-elite-club-portal`'s own role README); `ServiceAccess` grants remain entirely manual, through `/admin/services`.
