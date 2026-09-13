@@ -16,7 +16,9 @@ location = /hotline-listing/ {
     auth_request_set $discord_user_id $upstream_http_x_discord_user_id;
     error_page 401 = @zw_login;
     proxy_intercept_errors on;
-    proxy_pass http://{{ hotline_listing_upstream_name }}/;
+    resolver 127.0.0.11 valid=10s ipv6=off;
+    set $hotline_listing_host "{{ hotline_listing_container_name }}";
+    proxy_pass http://$hotline_listing_host:{{ hotline_listing_http_port }}/;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $client_real_ip;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -29,7 +31,9 @@ location = /hotline-listing/import {
     auth_request /internal/zw-auth;
     auth_request_set $discord_user_id $upstream_http_x_discord_user_id;
     error_page 401 = @zw_login;
-    proxy_pass http://{{ hotline_listing_upstream_name }}/import;
+    resolver 127.0.0.11 valid=10s ipv6=off;
+    set $hotline_listing_host "{{ hotline_listing_container_name }}";
+    proxy_pass http://$hotline_listing_host:{{ hotline_listing_http_port }}/import;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $client_real_ip;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -39,7 +43,9 @@ location = /hotline-listing/import {
 
 # Ungated: just clears a cookie, nothing to protect — see app.py's /logout.
 location = /hotline-listing/logout {
-    proxy_pass http://{{ hotline_listing_upstream_name }}/logout;
+    resolver 127.0.0.11 valid=10s ipv6=off;
+    set $hotline_listing_host "{{ hotline_listing_container_name }}";
+    proxy_pass http://$hotline_listing_host:{{ hotline_listing_http_port }}/logout;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $client_real_ip;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -52,7 +58,9 @@ location ~ ^/hotline-listing/[^/]+/(edit|save|delete|claim)$ {
     auth_request_set $discord_user_id $upstream_http_x_discord_user_id;
     error_page 401 = @zw_login;
     rewrite ^/hotline-listing/(.*)$ /$1 break;
-    proxy_pass http://{{ hotline_listing_upstream_name }};
+    resolver 127.0.0.11 valid=10s ipv6=off;
+    set $hotline_listing_host "{{ hotline_listing_container_name }}";
+    proxy_pass http://$hotline_listing_host:{{ hotline_listing_http_port }};
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $client_real_ip;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -64,7 +72,9 @@ location ~ ^/hotline-listing/[^/]+/(edit|save|delete|claim)$ {
 # Ungated: read-only dashboard view + chart data.
 location /hotline-listing/ {
     proxy_intercept_errors on;
-    proxy_pass http://{{ hotline_listing_upstream_name }}/;
+    resolver 127.0.0.11 valid=10s ipv6=off;
+    set $hotline_listing_host "{{ hotline_listing_container_name }}";
+    proxy_pass http://$hotline_listing_host:{{ hotline_listing_http_port }}/;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $client_real_ip;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -73,7 +83,9 @@ location /hotline-listing/ {
 
 location = /internal/zw-auth {
     internal;
-    proxy_pass http://{{ meow_elite_club_portal_upstream_name }}/auth;
+    resolver 127.0.0.11 valid=10s ipv6=off;
+    set $meow_elite_club_portal_host "{{ meow_elite_club_portal_container_name }}";
+    proxy_pass http://$meow_elite_club_portal_host:{{ meow_elite_club_portal_http_port }}/auth;
     proxy_pass_request_body off;
     proxy_set_header Content-Length "";
     proxy_set_header Cookie $http_cookie;
@@ -81,7 +93,9 @@ location = /internal/zw-auth {
 }
 
 location = /internal/bridge {
-    proxy_pass http://{{ meow_elite_club_portal_upstream_name }}/bridge/consume;
+    resolver 127.0.0.11 valid=10s ipv6=off;
+    set $meow_elite_club_portal_host "{{ meow_elite_club_portal_container_name }}";
+    proxy_pass http://$meow_elite_club_portal_host:{{ meow_elite_club_portal_http_port }}/bridge/consume;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $client_real_ip;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

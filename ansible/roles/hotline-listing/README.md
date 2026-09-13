@@ -9,7 +9,7 @@ Deploys the hotline-listing FastAPI service as a Docker container on the target 
 3. Builds the Docker image locally on the target host from the synced source
 4. Templates `config.yaml` (Redis URL, database URL, cache TTL) into the data directory
 5. Starts the container with `config.yaml` mounted read-only and `ROOT_PATH` + `STATIC_VERSION` env vars set
-6. Deploys the nginx upstream config to `custom-upstream/` and the location config at `/hotline-listing/` (when `hotline_listing_nginx_proxy: true`)
+6. Deploys the nginx location config at `/hotline-listing/` (when `hotline_listing_nginx_proxy: true`) — proxies to the app and to the portal's `/auth`/`/bridge/consume` via nginx `resolver` + `set`, not a static `upstream {}` block, so a portal redeploy alone can't leave this pointed at a stale IP
 7. Purges the Cloudflare cache (when `cf_purge_cache: true`)
 
 ## Variables
@@ -20,15 +20,15 @@ Deploys the hotline-listing FastAPI service as a Docker container on the target 
 | `hotline_listing_image` | `hotline-listing:local` | Image name:tag (built on host) |
 | `hotline_listing_http_port` | `8999` | Port the container listens on |
 | `hotline_listing_data_dir` | `{{ docker_volumes_directory }}/hotline-listing` | Data and build directory on target |
-| `hotline_listing_nginx_proxy` | `false` | Set to `true` to deploy the nginx upstream + location config |
-| `hotline_listing_upstream_name` | `hotline_listing_upstream` | Nginx upstream block name; referenced by the location config's `proxy_pass` |
+| `hotline_listing_nginx_proxy` | `false` | Set to `true` to deploy the nginx location config |
 | `hotline_listing_root_path` | `/hotline-listing` | URL prefix passed to the app as `ROOT_PATH` |
 | `hotline_listing_local_source_dir` | `{{ playbook_dir }}/../..` | Project root on the Ansible controller (resolved relative to the playbook) |
 | `hotline_listing_database_url` | `postgresql://postgres:{{ postgres_password }}@{{ postgresql_container_name }}:5432/hotline_prices` | PostgreSQL URL written into config.yaml |
 | `hotline_listing_redis_url` | `redis://{{ redis_container_name }}:6379` | Redis URL written into config.yaml |
 | `hotline_listing_cache_ttl` | `3600` | Chart cache TTL in seconds |
 | `hotline_listing_city_id` | `154` | City ID (Kyiv) |
-| `meow_elite_club_portal_upstream_name` | `meow_elite_club_portal_upstream` | Nginx upstream name for the Discord SSO gate's `/auth` and `/bridge/consume` endpoints |
+| `meow_elite_club_portal_container_name` | `meow-elite-club-portal` | Portal's Docker container name — resolved live via nginx `resolver`, not a static upstream, for the Discord SSO gate's `/auth` and `/bridge/consume` endpoints |
+| `meow_elite_club_portal_http_port` | `8867` | Portal's container port |
 | `hotline_listing_service_slug` | `hotline-listing` | `X-Service-Slug` sent to `/auth`; also the `slug` this role self-registers as its `GatedService` row |
 | `meow_elite_club_portal_service_registration_token` | *(from Infisical `/hosts/shared` `meow-elite-club-portal-service-registration-token`)* | Bearer token for `POST /api/services/register` |
 
