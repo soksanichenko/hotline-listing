@@ -2,7 +2,7 @@
 
 ## Project summary
 
-Multi-tenant FastAPI price-tracking dashboard for hotline.ua. Users get a UUID URL — the UUID itself is the access token, no auth. Product configs are stored in PostgreSQL as JSONB.
+Multi-tenant FastAPI price-tracking dashboard for hotline.ua. Users get a UUID URL — the UUID itself is the access token for the read-only dashboard/chart views; creating and editing configs is gated behind Discord SSO. Product configs are stored in PostgreSQL as JSONB.
 
 ## Project structure
 
@@ -33,7 +33,8 @@ hotline-listing/
     │       ├── alembic/
     │       │   ├── env.py          # async env; reads config.yaml from CWD
     │       │   └── versions/
-    │       │       └── d413ff1678f4_create_configs_table.py
+    │       │       ├── d413ff1678f4_create_configs_table.py
+    │       │       └── 6bf7338d4492_add_config_owner.py
     │       ├── app.py              # FastAPI routes, lifespan, Jinja2 filters
     │       ├── cache.py            # async Redis wrapper (JSON, TTL)
     │       ├── client.py           # hotline.ua GraphQL client (getChart)
@@ -62,6 +63,9 @@ hotline-listing/
 | GET | `/{uuid}/chart/{slug}` | Price history chart for one product (Chart.js) |
 | GET | `/{uuid}/edit` | Product list editor |
 | POST | `/{uuid}/save` | JSON body `{products:[…]}` → persist → 303 `/{uuid}` |
+| POST | `/{uuid}/claim` | Bind an unowned (legacy) config to the requesting Discord user → 303 `/{uuid}/edit` |
+| POST | `/{uuid}/delete` | Delete a config (owner-only) → 303 `/` |
+| POST | `/logout` | Clear the portal-bridged `zw_session` cookie → 303 `/` |
 
 ## AppConfig fields
 
@@ -85,6 +89,7 @@ Table `configs` (PostgreSQL, managed by Alembic):
 |--------|------|-------|
 | `id` | UUID PK | `gen_random_uuid()` — also the user's URL token |
 | `data` | JSONB | `{"products": [{url, title?, count, purchase_price?, purchase_date?}]}` |
+| `owner_discord_user_id` | text, nullable, indexed | Discord user ID that created the config; `NULL` for legacy configs created before ownership tracking |
 | `created_at` | timestamptz | `now()` |
 | `updated_at` | timestamptz | `now()` |
 
@@ -92,28 +97,28 @@ Table `configs` (PostgreSQL, managed by Alembic):
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| `fastapi` | 0.139.2 | Web framework |
-| `uvicorn` | 0.51.0 | ASGI server |
-| `sqlalchemy` | 2.0.51 | ORM + async engine |
-| `psycopg[binary]` | 3.3.4 | PostgreSQL driver — sync and async, single package |
-| `alembic` | 1.18.5 | Schema migrations |
+| `fastapi` | 0.141.1 | Web framework |
+| `uvicorn` | 0.52.4 | ASGI server |
+| `sqlalchemy` | 2.0.52 | ORM + async engine |
+| `psycopg[binary]` | 3.3.5 | PostgreSQL driver — sync and async, single package |
+| `alembic` | 1.20.0 | Schema migrations |
 | `sqlalchemy-utils` | 0.42.1 | `create_database` / `database_exists` |
-| `redis` | 8.0.1 | Async Redis client |
+| `redis` | 8.1.0 | Async Redis client |
 | `httpx` | 0.28.1 | HTTP client for hotline.ua GraphQL |
-| `pydantic` | 2.13.4 | Config validation |
+| `pydantic` | 2.13.5 | Config validation |
 | `jinja2` | 3.1.6 | Server-side HTML templates |
 | `python-multipart` | 0.0.32 | YAML file upload (`/import`) |
 | `pyyaml` | 6.0.3 | Parse uploaded YAML configs |
 
 ## Architecture notes
 
-**No auth** — the UUID URL is the only access control. Anyone with the link can view and edit.
+**No auth on the read-only dashboard** — `/{uuid}` and `/{uuid}/chart/...` have no access control beyond the UUID itself, so a share link works for anyone. List creation/editing (`/`, `/import`, `/{uuid}/edit|save|claim|delete`) is gated behind Discord SSO via the `meow-elite-club-portal` service (nginx `auth_request` + a cross-domain cookie bridge at `/internal/bridge` — see the `hotline-listing` Ansible role's README and `nginx-location.conf.j2`). Configs are further scoped to the Discord user that created them via `owner_discord_user_id`; `_require_owner()` in `app.py` returns 403 for non-owners and allows any Discord-authenticated user to claim legacy (pre-ownership) configs.
 
 **hotline.ua API** — uses the undocumented GraphQL endpoint at `https://hotline.ua/svc/frontend-api/graphql`, operation `getChart`. This requires no authentication. The `byPathQueryProduct` operation does require auth and is not used.
 
 **DB auto-creation** — `create_db_if_not_exists(sync_url)` (via `sqlalchemy_utils`) is called in the FastAPI lifespan before `init_db`. Tables are managed exclusively by Alembic — run `alembic upgrade head` manually after first deploy.
 
-**SQLAlchemy driver** — `psycopg[binary]==3.3.4` is the only PostgreSQL driver. Async URL uses `postgresql+psycopg_async://`; sync URL (for sqlalchemy_utils and Alembic) uses `postgresql+psycopg://` — both derived from the plain `database_url` in config via `sync_database_url` / `async_database_url` properties.
+**SQLAlchemy driver** — `psycopg[binary]==3.3.5` is the only PostgreSQL driver. Async URL uses `postgresql+psycopg_async://`; sync URL (for sqlalchemy_utils and Alembic) uses `postgresql+psycopg://` — both derived from the plain `database_url` in config via `sync_database_url` / `async_database_url` properties.
 
 **Migrations on start** — `entrypoint.sh` runs `alembic upgrade head` before starting uvicorn, so the schema is always current after a container restart or redeploy.
 

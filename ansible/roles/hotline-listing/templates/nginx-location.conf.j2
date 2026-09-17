@@ -96,7 +96,10 @@ location = /internal/zw-auth {
 location = /internal/bridge {
     resolver 127.0.0.11 valid=10s ipv6=off;
     set $meow_elite_club_portal_host "{{ meow_elite_club_portal_container_name }}";
-    proxy_pass http://$meow_elite_club_portal_host:{{ meow_elite_club_portal_http_port }}/bridge/consume;
+    # proxy_pass targets a variable ($meow_elite_club_portal_host, for dynamic
+    # DNS resolution), so nginx does NOT auto-forward the query string here —
+    # $is_args$args must be explicit or the portal's ?ticket=... is dropped.
+    proxy_pass http://$meow_elite_club_portal_host:{{ meow_elite_club_portal_http_port }}/bridge/consume$is_args$args;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $client_real_ip;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
