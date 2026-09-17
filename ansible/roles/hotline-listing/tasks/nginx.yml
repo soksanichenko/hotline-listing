@@ -2,6 +2,15 @@
 - name: Deploy hotline-listing nginx location config
   ansible.builtin.template:
     src: nginx-location.conf.j2
+    dest: "{{ hotline_listing_nginx_custom_locations_path }}/hotline-listing.conf"
+    mode: '0644'
+  become: yes
+  when: hotline_listing_nginx_proxy
+  notify: Reload nginx
+
+- name: Deploy hotline-listing legacy subpath redirect
+  ansible.builtin.template:
+    src: nginx-legacy-redirect.conf.j2
     dest: "{{ nginx_domain_custom_locations_path }}/hotline-listing.conf"
     mode: '0644'
   become: yes
@@ -18,7 +27,7 @@
     body:
       slug: "{{ hotline_listing_service_slug }}"
       name: "Hotline.ua price listing"
-      url: "https://{{ cf_zone_domain }}{{ hotline_listing_root_path }}/"
+      url: "https://{{ hotline_listing_domain }}/"
     status_code: [200]
   when: hotline_listing_nginx_proxy
   no_log: true

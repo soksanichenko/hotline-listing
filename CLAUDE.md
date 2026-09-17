@@ -124,7 +124,7 @@ Table `configs` (PostgreSQL, managed by Alembic):
 
 **Static versioning** — `STATIC_VERSION` env var (set by Ansible from MD5 of `style.css + i18n.js`) is exposed as Jinja2 global `static_version` and appended as `?v=` to all CSS/JS URLs. Cloudflare cache is purged after each deploy.
 
-**Subpath deployment** — `ROOT_PATH` env var (e.g. `/hotline-listing`) is read at startup and set as a Jinja2 global. All template links and JS fetch URLs use `{{ root_path }}/...` / `${ROOT_PATH}/...`. When empty, the app serves from root (local dev).
+**Subpath deployment** — `ROOT_PATH` env var (e.g. `/hotline-listing`, for a subpath deployment) is read at startup and set as a Jinja2 global. All template links and JS fetch URLs use `{{ root_path }}/...` / `${ROOT_PATH}/...`. Production now serves from its own subdomain (`hotline-listing.zelgray.work`), so `ROOT_PATH` is empty there too — this mechanism only matters again if the app is ever put back behind a subpath.
 
 **config.yaml resolution** — `app.py` reads `Path(os.getenv('CONFIG_PATH', 'config.yaml'))`. When unset, this is relative to CWD. Run uvicorn and alembic from the project root so they find `config.yaml` there. In Docker, CWD is `/app` and the Ansible role mounts `config.yaml` at `/app/config.yaml`.
 

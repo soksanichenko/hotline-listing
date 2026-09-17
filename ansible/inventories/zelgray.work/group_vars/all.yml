@@ -16,6 +16,7 @@ redis_container_name: "redis"
 postgres_password: "{{ infisical_secrets.secrets['postgres-db-password'] }}"
 
 hotline_listing_nginx_proxy: true
+hotline_listing_domain: "hotline-listing.zelgray.work"
 
 cf_zone_domain: "zelgray.work"
 cf_api_token_clear_cache: "{{ infisical_secrets.secrets['cf-api-token-clear-cache'] }}"

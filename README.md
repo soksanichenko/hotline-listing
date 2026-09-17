@@ -64,7 +64,7 @@ Open `http://localhost:8000`.
 
 ## Deployment
 
-The app is deployed to `zelgray.work/hotline-listing/` via Ansible.
+The app is deployed to `hotline-listing.zelgray.work` via Ansible.
 
 ```bash
 # Install Ansible tooling and Galaxy collections
@@ -76,7 +76,7 @@ ansible-playbook -i inventories/zelgray.work playbooks/deploy.yml
 ```
 
 The container is built on the target host from `sources/` synced by the playbook.
-`ROOT_PATH=/hotline-listing` is set automatically by the Ansible role. Alembic migrations run automatically on container start via `entrypoint.sh`.
+Alembic migrations run automatically on container start via `entrypoint.sh`.
 
 ## License
 

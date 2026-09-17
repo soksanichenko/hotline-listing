@@ -4,7 +4,13 @@ hotline_listing_image: 'hotline-listing:local'
 hotline_listing_http_port: 8999
 hotline_listing_data_dir: "{{ docker_volumes_directory }}/hotline-listing"
 hotline_listing_nginx_proxy: false
-hotline_listing_root_path: '/hotline-listing'
+hotline_listing_root_path: ''
+
+# Own subdomain (not a zelgray.work subpath) — set in inventory group_vars,
+# e.g. hotline-listing.zelgray.work. Requires a matching entry in infra's
+# host_domains and in meow-elite-club-portal's gated_domains allowlist.
+hotline_listing_domain: ""
+hotline_listing_nginx_custom_locations_path: "{{ nginx_confd_path }}/{{ hotline_listing_domain }}-custom-locations"
 
 # Discord SSO gate (meow-elite-club-portal): the portal's own container name
 # and port on the shared Docker network, and the X-Service-Slug this service

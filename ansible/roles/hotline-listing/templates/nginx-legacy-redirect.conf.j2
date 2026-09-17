@@ -1,0 +1,12 @@
+# hotline-listing moved from a zelgray.work subpath to its own subdomain
+# ({{ hotline_listing_domain }}). This apex-domain location only exists to
+# 301 pre-migration share links (zelgray.work/hotline-listing/{uuid}) to the
+# new host, preserving the path and query string so old links keep working.
+
+location = /hotline-listing {
+    return 301 https://{{ hotline_listing_domain }}/;
+}
+
+location /hotline-listing/ {
+    rewrite ^/hotline-listing/(.*)$ https://{{ hotline_listing_domain }}/$1 permanent;
+}
