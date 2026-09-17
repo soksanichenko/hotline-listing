@@ -57,9 +57,9 @@ location ~ ^/hotline-listing/[^/]+/(edit|save|delete|claim)$ {
     auth_request_set $discord_avatar_url $upstream_http_x_discord_avatar_url;
     auth_request_set $discord_user_id $upstream_http_x_discord_user_id;
     error_page 401 = @zw_login;
-    rewrite ^/hotline-listing/(.*)$ /$1 break;
     resolver 127.0.0.11 valid=10s ipv6=off;
     set $hotline_listing_host "{{ hotline_listing_container_name }}";
+    rewrite ^/hotline-listing/(.*)$ /$1 break;
     proxy_pass http://$hotline_listing_host:{{ hotline_listing_http_port }};
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $client_real_ip;
@@ -74,7 +74,8 @@ location /hotline-listing/ {
     proxy_intercept_errors on;
     resolver 127.0.0.11 valid=10s ipv6=off;
     set $hotline_listing_host "{{ hotline_listing_container_name }}";
-    proxy_pass http://$hotline_listing_host:{{ hotline_listing_http_port }}/;
+    rewrite ^/hotline-listing/(.*)$ /$1 break;
+    proxy_pass http://$hotline_listing_host:{{ hotline_listing_http_port }};
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $client_real_ip;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
