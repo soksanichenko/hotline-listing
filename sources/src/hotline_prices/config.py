@@ -15,6 +15,7 @@ class ProductConfig(BaseModel):
     count: int = 1
     purchase_price: float | None = None
     purchase_date: date | None = None
+    target_price: float | None = None
 
 
 class AppConfig(BaseModel):
@@ -25,6 +26,12 @@ class AppConfig(BaseModel):
     cache_ttl: int = 3600
     city_id: int = 154
     products: list[ProductConfig] = []
+    price_check_interval: int = 1800
+    smtp_host: str = "mail.zelgray.work"
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from: str = "noreply@zelgray.work"
 
     @property
     def sync_database_url(self) -> str:

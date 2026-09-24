@@ -37,4 +37,15 @@ hotline_listing_database_url: "postgresql://postgres:{{ postgres_password }}@{{ 
 hotline_listing_redis_url: "redis://{{ redis_container_name }}:6379"
 hotline_listing_cache_ttl: 3600
 hotline_listing_city_id: 154
+
+# Price-target email alerts (see the notifications module) — sent via the
+# shared Mailcow instance, reusing the same noreply@zelgray.work mailbox
+# vaultwarden already sends through. Override the username/password in
+# inventory group_vars if this ever needs its own mailbox.
+hotline_listing_price_check_interval: 1800
+hotline_listing_smtp_host: "mail.zelgray.work"
+hotline_listing_smtp_port: 587
+hotline_listing_smtp_username: "noreply@zelgray.work"
+hotline_listing_smtp_password: ""
+hotline_listing_smtp_from: "noreply@zelgray.work"
 ...

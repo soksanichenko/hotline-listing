@@ -7,7 +7,7 @@ Deploys the hotline-listing FastAPI service as a Docker container on the target 
 1. Creates the data directory at `{{ hotline_listing_data_dir }}`
 2. Syncs `sources/` from the Ansible controller to `{{ hotline_listing_data_dir }}/` (Docker build context)
 3. Builds the Docker image locally on the target host from the synced source
-4. Templates `config.yaml` (Redis URL, database URL, cache TTL) into the data directory
+4. Templates `config.yaml` (Redis URL, database URL, cache TTL, SMTP settings for price-target alerts) into the data directory
 5. Starts the container with `config.yaml` mounted read-only and `ROOT_PATH` + `STATIC_VERSION` env vars set
 6. Deploys the nginx location config at `{{ hotline_listing_domain }}` (when `hotline_listing_nginx_proxy: true`) — proxies to the app and to the portal's `/auth`/`/bridge/consume` via nginx `resolver` + `set`, not a static `upstream {}` block, so a portal redeploy alone can't leave this pointed at a stale IP
 7. Deploys a 301 redirect on the `zelgray.work` apex (`/hotline-listing/...` → `{{ hotline_listing_domain }}/...`) so pre-migration share links keep working
@@ -29,6 +29,12 @@ Deploys the hotline-listing FastAPI service as a Docker container on the target 
 | `hotline_listing_redis_url` | `redis://{{ redis_container_name }}:6379` | Redis URL written into config.yaml |
 | `hotline_listing_cache_ttl` | `3600` | Chart cache TTL in seconds |
 | `hotline_listing_city_id` | `154` | City ID (Kyiv) |
+| `hotline_listing_price_check_interval` | `1800` | Seconds between price-target alert checks |
+| `hotline_listing_smtp_host` | `mail.zelgray.work` | SMTP server for price-target alert emails |
+| `hotline_listing_smtp_port` | `587` | SMTP port (STARTTLS) |
+| `hotline_listing_smtp_username` | `noreply@zelgray.work` | SMTP auth username — reuses the mailbox `vaultwarden` already sends through |
+| `hotline_listing_smtp_password` | `""` | SMTP auth password — set in inventory `group_vars` from Infisical (`mailcow-mailbox-password-noreply`) |
+| `hotline_listing_smtp_from` | `noreply@zelgray.work` | `From:` address on alert emails |
 | `meow_elite_club_portal_container_name` | `meow-elite-club-portal` | Portal's Docker container name — resolved live via nginx `resolver`, not a static upstream, for the Discord SSO gate's `/auth` and `/bridge/consume` endpoints |
 | `meow_elite_club_portal_http_port` | `8867` | Portal's container port |
 | `hotline_listing_service_slug` | `hotline-listing` | `X-Service-Slug` sent to `/auth`; also the `slug` this role self-registers as its `GatedService` row |
@@ -65,3 +71,4 @@ ansible-playbook -i inventories/zelgray.work playbooks/deploy.yml \
 - The service moved from a `zelgray.work/hotline-listing/` subpath to its own subdomain to drop the `ROOT_PATH`/prefix-rewrite gymnastics that caused two prior nginx bugs. The old subpath now 301-redirects to `{{ hotline_listing_domain }}` (see `nginx-legacy-redirect.conf.j2`) so links shared before the move keep working.
 - The gate enforces per-service access, not just "any valid Discord session": a `GatedService(slug="hotline-listing")` row and at least one `ServiceAccess` grant (individual Discord user or guild) must exist. The `GatedService` row is created/updated automatically on every deploy (`POST /api/services/register`, Bearer-token auth — see `meow-elite-club-portal`'s own role README); `ServiceAccess` grants remain entirely manual, through `/admin/services`.
 - The landing and editor pages show a top-right "logged in as" menu (Discord avatar, or a plain placeholder if the visitor has no custom one, plus a Log out button) — the two gated locations now also capture and forward `X-Discord-Avatar-Url`. This app has no login of its own, so `POST /logout` only clears the `zw_session` cookie the portal set on `zelgray.work` — a purely local action, not a real Discord sign-out: `portal_session` on meow-elite.club stays valid, so the very next Discord-gated page load just re-bridges a fresh `zw_session` automatically. That's the point (force-refreshing a stale one), not a bug. `zw_session` is root-domain-scoped, so this also affects any other `zelgray.work`-rooted gated service open in the same browser (e.g. `vless-config-generator`) — not new coupling, just how the shared bridge cookie already worked.
+- All gated locations also capture and forward `X-Discord-Email` (the portal only emits it when the visitor granted the `email` OAuth scope and it's Discord-verified). The app persists it as the config owner's notification address for price-target alerts — see the app's own `CLAUDE.md` for the alert job itself.

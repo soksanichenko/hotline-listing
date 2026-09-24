@@ -11,6 +11,7 @@ Multi-tenant price-tracking dashboard for hotline.ua. Each user gets a UUID-base
 - **Caching** — chart data is cached in Redis per product (default 1 hour)
 - **i18n** — UI language toggle: Ukrainian / English / Russian (persisted in localStorage)
 - **"My tables"** — configs are tied server-side to the creating Discord user (`owner_discord_user_id`, via `X-Discord-User-Id` forwarded by the nginx gate on `/`, `/import`, and the `/{id}/edit|save|delete|claim` locations); the landing page lists them from the DB, so they follow you across browsers/devices instead of a per-browser `localStorage` list. `/{id}/edit` and `/{id}/save` are owner-only (403 otherwise); the ✕ button on the landing page really deletes the config. Configs created before this existed have no recorded owner and remain open to any Discord-authenticated user, same as before — the edit page shows a "claim as mine" button for these, which binds the config to whoever clicks it first (`POST /{id}/claim`, a no-op if already claimed by you, 403 if claimed by someone else in the meantime).
+- **Price-target email alerts** — set a target price on any product in the editor and you'll get an email at your Discord account's (verified) email address once the price drops to it or below. A checker runs periodically in the background; once notified, it stays quiet until the price rises back above the target and dips again, so you're not emailed on every check while it's still low.
 
 ## Requirements
 
@@ -29,6 +30,12 @@ Multi-tenant price-tracking dashboard for hotline.ua. Each user gets a UUID-base
 | `cache_ttl` | `3600` | Chart data cache TTL in seconds |
 | `city_id` | `154` | City ID (154 = Kyiv) |
 | `products` | `[]` | Product list — used for local dev and YAML import format |
+| `price_check_interval` | `1800` | Seconds between price-target alert checks |
+| `smtp_host` | `mail.zelgray.work` | SMTP server used to send price-target alert emails |
+| `smtp_port` | `587` | SMTP port (STARTTLS) |
+| `smtp_username` | `""` | SMTP auth username |
+| `smtp_password` | `""` | SMTP auth password |
+| `smtp_from` | `noreply@zelgray.work` | `From:` address on alert emails |
 
 ### Product format
 
@@ -39,6 +46,7 @@ products:
     count: 1
     purchase_price: 9999
     purchase_date: 2025-01-01
+    target_price: 8999
 ```
 
 `url` is the only required field. A bare URL string is also accepted.

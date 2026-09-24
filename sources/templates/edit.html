@@ -38,6 +38,7 @@
 <main>
   <div class="section">
     <h2 data-i18n="section_products">Список товарів</h2>
+    <p style="color:var(--text-muted);margin-bottom:0.75rem" data-i18n="target_price_hint">Якщо вказати цільову ціну — на твою Discord-пошту прийде лист, коли ціна впаде до неї або нижче.</p>
 
     <div id="rows">
       {% for p in products %}
@@ -62,6 +63,10 @@
           <div class="field field-sm">
             <label data-i18n="label_purchase_date">Дата купівлі</label>
             <input type="date" name="purchase_date" value="{{ p.purchase_date or '' }}">
+          </div>
+          <div class="field field-sm">
+            <label data-i18n="label_target_price">Цільова ціна, ₴</label>
+            <input type="number" name="target_price" value="{{ p.target_price or '' }}" min="0" step="0.01" placeholder="—">
           </div>
           <button class="btn-remove" type="button" onclick="removeRow(this)" data-i18n-title="remove" title="Видалити">✕</button>
         </div>
@@ -129,6 +134,10 @@ const EMPTY_ROW = `
       <label data-i18n="label_purchase_date">Дата купівлі</label>
       <input type="date" name="purchase_date" value="">
     </div>
+    <div class="field field-sm">
+      <label data-i18n="label_target_price">Цільова ціна, ₴</label>
+      <input type="number" name="target_price" value="" min="0" step="0.01" placeholder="—">
+    </div>
     <button class="btn-remove" type="button" onclick="removeRow(this)" data-i18n-title="remove" title="Видалити">✕</button>
   </div>
 </div>`;
@@ -149,6 +158,7 @@ function collectProducts() {
     if (v('title'))          product.title          = v('title');
     if (v('purchase_price')) product.purchase_price = parseFloat(v('purchase_price'));
     if (v('purchase_date'))  product.purchase_date  = v('purchase_date');
+    if (v('target_price'))   product.target_price   = parseFloat(v('target_price'));
     return product;
   }).filter(p => p.url);
 }
@@ -176,6 +186,7 @@ function toYaml(products) {
     out += `    count: ${p.count}\n`;
     if (p.purchase_price != null) out += `    purchase_price: ${p.purchase_price}\n`;
     if (p.purchase_date)          out += `    purchase_date: ${p.purchase_date}\n`;
+    if (p.target_price != null)   out += `    target_price: ${p.target_price}\n`;
   }
   return out;
 }

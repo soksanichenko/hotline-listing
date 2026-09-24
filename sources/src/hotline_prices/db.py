@@ -38,12 +38,20 @@ def get_session() -> AsyncSession:
     return _session_factory()
 
 
-async def config_create(data: dict, owner_discord_user_id: str | None = None) -> UUID:
+async def config_create(
+    data: dict,
+    owner_discord_user_id: str | None = None,
+    owner_discord_email: str | None = None,
+) -> UUID:
     """Insert a new config row and return its UUID."""
     async with get_session() as session:
         result = await session.execute(
             insert(Config)
-            .values(data=data, owner_discord_user_id=owner_discord_user_id)
+            .values(
+                data=data,
+                owner_discord_user_id=owner_discord_user_id,
+                owner_discord_email=owner_discord_email,
+            )
             .returning(Config.id)
         )
         await session.commit()
@@ -72,13 +80,20 @@ async def config_get_owner(config_id: UUID) -> tuple[bool, str | None]:
         return True, row[0]
 
 
-async def config_update(config_id: UUID, data: dict) -> bool:
-    """Overwrite config data. Returns True if a row was updated."""
+async def config_update(
+    config_id: UUID, data: dict, owner_discord_email: str | None = None
+) -> bool:
+    """Overwrite config data. Also refreshes the owner's Discord email when
+    provided, keeping it current if it changed since the config was created.
+    Returns True if a row was updated."""
+    values = {"data": data}
+    if owner_discord_email is not None:
+        values["owner_discord_email"] = owner_discord_email
     async with get_session() as session:
         result = await session.execute(
             update(Config)
             .where(Config.id == config_id)
-            .values(data=data)
+            .values(**values)
             .returning(Config.id)
         )
         await session.commit()
@@ -95,18 +110,55 @@ async def config_delete(config_id: UUID) -> bool:
         return result.scalar_one_or_none() is not None
 
 
-async def config_claim(config_id: UUID, owner_discord_user_id: str) -> bool:
+async def config_claim(
+    config_id: UUID, owner_discord_user_id: str, owner_discord_email: str | None = None
+) -> bool:
     """Set the owner if the row is currently unowned. Returns True if this
     call claimed it (False if it was already owned, by anyone, by then)."""
     async with get_session() as session:
         result = await session.execute(
             update(Config)
             .where(Config.id == config_id, Config.owner_discord_user_id.is_(None))
-            .values(owner_discord_user_id=owner_discord_user_id)
+            .values(
+                owner_discord_user_id=owner_discord_user_id,
+                owner_discord_email=owner_discord_email,
+            )
             .returning(Config.id)
         )
         await session.commit()
         return result.scalar_one_or_none() is not None
+
+
+async def configs_list_with_owner_email() -> list[dict]:
+    """Return configs that have a known owner email, for the price-alert
+    background job (which filters for target_price itself)."""
+    async with get_session() as session:
+        result = await session.execute(
+            select(
+                Config.id,
+                Config.data,
+                Config.owner_discord_email,
+                Config.alert_state,
+            ).where(Config.owner_discord_email.is_not(None))
+        )
+        return [
+            {
+                "id": row.id,
+                "data": row.data,
+                "owner_discord_email": row.owner_discord_email,
+                "alert_state": row.alert_state,
+            }
+            for row in result
+        ]
+
+
+async def config_set_alert_state(config_id: UUID, alert_state: dict) -> None:
+    """Overwrite the price-alert state blob for a config."""
+    async with get_session() as session:
+        await session.execute(
+            update(Config).where(Config.id == config_id).values(alert_state=alert_state)
+        )
+        await session.commit()
 
 
 async def configs_list_for_owner(owner_discord_user_id: str) -> list[dict]:

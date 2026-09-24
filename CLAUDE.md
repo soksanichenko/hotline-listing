@@ -34,14 +34,16 @@ hotline-listing/
     │       │   ├── env.py          # async env; reads config.yaml from CWD
     │       │   └── versions/
     │       │       ├── d413ff1678f4_create_configs_table.py
-    │       │       └── 6bf7338d4492_add_config_owner.py
-    │       ├── app.py              # FastAPI routes, lifespan, Jinja2 filters
+    │       │       ├── 6bf7338d4492_add_config_owner.py
+    │       │       └── 37f30702a8cc_add_price_alerts.py
+    │       ├── app.py              # FastAPI routes, lifespan, Jinja2 filters, price-alert scheduler job
     │       ├── cache.py            # async Redis wrapper (JSON, TTL)
     │       ├── client.py           # hotline.ua GraphQL client (getChart)
     │       ├── config.py           # AppConfig + ProductConfig (Pydantic BaseModel)
     │       ├── db.py               # SQLAlchemy async CRUD + create_db_if_not_exists
     │       ├── models.py           # ProductSummary dataclass (computed properties)
-    │       └── models_db.py        # SQLAlchemy ORM: Base, Config
+    │       ├── models_db.py        # SQLAlchemy ORM: Base, Config
+    │       └── notifications.py    # SMTP price-target alert emails
     ├── static/
     │   ├── i18n.js                 # UK/EN/RU translations, applyLang/setLang/detectLang
     │   └── style.css               # dark theme
@@ -78,8 +80,16 @@ Loaded from `config.yaml` via `AppConfig.from_yaml()`. All have defaults.
 | `cache_ttl` | `3600` | Redis TTL for chart data (seconds) |
 | `city_id` | `154` | Kyiv |
 | `products` | `[]` | Local dev list; YAML import reads this key |
+| `price_check_interval` | `1800` | Seconds between price-target alert checks (APScheduler job) |
+| `smtp_host` | `mail.zelgray.work` | SMTP server for price-target alert emails |
+| `smtp_port` | `587` | SMTP port (STARTTLS) |
+| `smtp_username` | `""` | SMTP auth username (mailbox address) |
+| `smtp_password` | `""` | SMTP auth password |
+| `smtp_from` | `noreply@zelgray.work` | `From:` address on alert emails |
 
 `async_database_url` property replaces `postgresql://` → `postgresql+psycopg_async://` for SQLAlchemy async engine.
+
+`ProductConfig` also has an optional `target_price` (float) — see **Price-target email alerts** below.
 
 ## DB model
 
@@ -88,8 +98,10 @@ Table `configs` (PostgreSQL, managed by Alembic):
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | UUID PK | `gen_random_uuid()` — also the user's URL token |
-| `data` | JSONB | `{"products": [{url, title?, count, purchase_price?, purchase_date?}]}` |
+| `data` | JSONB | `{"products": [{url, title?, count, purchase_price?, purchase_date?, target_price?}]}` |
 | `owner_discord_user_id` | text, nullable, indexed | Discord user ID that created the config; `NULL` for legacy configs created before ownership tracking |
+| `owner_discord_email` | text, nullable | Verified Discord email of the owner, captured from `X-Discord-Email` on create/save/claim; used as the price-alert notification address |
+| `alert_state` | JSONB | Per-product price-alert armed/notified state, keyed by product `url`; managed only by the background alert job, never by `/save` — see **Price-target email alerts** |
 | `created_at` | timestamptz | `now()` |
 | `updated_at` | timestamptz | `now()` |
 
@@ -109,10 +121,13 @@ Table `configs` (PostgreSQL, managed by Alembic):
 | `jinja2` | 3.1.6 | Server-side HTML templates |
 | `python-multipart` | 0.0.32 | YAML file upload (`/import`) |
 | `pyyaml` | 6.0.3 | Parse uploaded YAML configs |
+| `apscheduler` | 3.11.3 | In-process periodic job for price-target alert checks |
 
 ## Architecture notes
 
-**No auth on the read-only dashboard** — `/{uuid}` and `/{uuid}/chart/...` have no access control beyond the UUID itself, so a share link works for anyone. List creation/editing (`/`, `/import`, `/{uuid}/edit|save|claim|delete`) is gated behind Discord SSO via the `meow-elite-club-portal` service (nginx `auth_request` + a cross-domain cookie bridge at `/internal/bridge` — see the `hotline-listing` Ansible role's README and `nginx-location.conf.j2`). Configs are further scoped to the Discord user that created them via `owner_discord_user_id`; `_require_owner()` in `app.py` returns 403 for non-owners and allows any Discord-authenticated user to claim legacy (pre-ownership) configs.
+**No auth on the read-only dashboard** — `/{uuid}` and `/{uuid}/chart/...` have no access control beyond the UUID itself, so a share link works for anyone. List creation/editing (`/`, `/import`, `/{uuid}/edit|save|claim|delete`) is gated behind Discord SSO via the `meow-elite-club-portal` service (nginx `auth_request` + a cross-domain cookie bridge at `/internal/bridge` — see the `hotline-listing` Ansible role's README and `nginx-location.conf.j2`). Configs are further scoped to the Discord user that created them via `owner_discord_user_id`; `_require_owner()` in `app.py` returns 403 for non-owners and allows any Discord-authenticated user to claim legacy (pre-ownership) configs. The portal also emits a verified `X-Discord-Email` header (requires the `email` OAuth scope) — nginx forwards it on the same gated locations as `X-Discord-User-Id`, and `app.py` persists it to `owner_discord_email` on create/save/claim.
+
+**Price-target email alerts** — a product can have an optional `target_price`. An APScheduler job (`_check_price_alerts()` in `app.py`, interval `price_check_interval`) periodically checks every config with a known `owner_discord_email` and emails (`notifications.send_price_alert()`, plain SMTP via Mailcow at `mail.zelgray.work`) once a product's price drops to or below its target. Per-product armed/notified state lives in the `alert_state` JSONB column — separate from `data` so the user-editable `/save` endpoint never clobbers it. State machine: price above target → armed; price ≤ target while armed → send + disarm; price ≤ target while disarmed → silent (already notified); price rises back above target → re-arm, so a later dip notifies again.
 
 **hotline.ua API** — uses the undocumented GraphQL endpoint at `https://hotline.ua/svc/frontend-api/graphql`, operation `getChart`. This requires no authentication. The `byPathQueryProduct` operation does require auth and is not used.
 

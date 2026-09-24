@@ -10,6 +10,7 @@ from uuid import UUID
 
 import httpx
 import yaml
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -24,12 +25,15 @@ from .db import (
     config_delete,
     config_get,
     config_get_owner,
+    config_set_alert_state,
     config_update,
     configs_list_for_owner,
+    configs_list_with_owner_email,
     create_db_if_not_exists,
     init_db,
 )
 from .models import ProductSummary
+from .notifications import send_price_alert
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +44,7 @@ config = AppConfig.from_yaml(Path(os.getenv("CONFIG_PATH", "config.yaml")))
 templates = Jinja2Templates(directory=_ROOT / "templates")
 _cache: Cache | None = None
 _http: httpx.AsyncClient | None = None
+_scheduler: AsyncIOScheduler | None = None
 
 
 # ── Jinja2 filters ────────────────────────────────────────────────────────────
@@ -80,12 +85,18 @@ templates.env.globals["static_version"] = os.getenv("STATIC_VERSION", "")
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    global _cache, _http
+    global _cache, _http, _scheduler
     create_db_if_not_exists(config.sync_database_url)
     init_db(config.async_database_url)
     _cache = Cache(config.redis_url, config.cache_ttl)
     _http = httpx.AsyncClient(timeout=15.0)
+    _scheduler = AsyncIOScheduler()
+    _scheduler.add_job(
+        _check_price_alerts, "interval", seconds=config.price_check_interval
+    )
+    _scheduler.start()
     yield
+    _scheduler.shutdown()
     await _cache.close()
     await _http.aclose()
 
@@ -153,6 +164,55 @@ async def _get_product(product: ProductConfig) -> ProductSummary:
         purchase_date=product.purchase_date,
         price_history_uah=[p for _, p in uah_series[-60:]],
     )
+
+
+async def _check_price_alerts() -> None:
+    """Background job: for every product with a target_price, notify the
+    config owner by email once its price drops to or below that target.
+    Re-arms once the price rises back above the target, so a later dip
+    notifies again instead of staying silent forever."""
+    for cfg in await configs_list_with_owner_email():
+        products = _db_to_products(cfg["data"])
+        alert_state = dict(cfg["alert_state"])
+        changed = False
+        for product in products:
+            if product.target_price is None:
+                continue
+            state = alert_state.get(product.url, {})
+            summary = await _get_product(product)
+            if summary.error or not summary.price_uah:
+                continue
+
+            if summary.price_uah > product.target_price:
+                if not state.get("armed", True):
+                    alert_state[product.url] = {"armed": True}
+                    changed = True
+                continue
+
+            if not state.get("armed", True):
+                continue
+
+            try:
+                await asyncio.to_thread(
+                    send_price_alert,
+                    config,
+                    cfg["owner_discord_email"],
+                    summary.title,
+                    summary.price_uah,
+                    product.url,
+                )
+            except Exception:
+                logger.exception("Failed to send price alert for %s", product.url)
+                continue
+            alert_state[product.url] = {
+                "armed": False,
+                "last_notified_price": summary.price_uah,
+                "notified_at": datetime.now(UTC).isoformat(),
+            }
+            changed = True
+
+        if changed:
+            await config_set_alert_state(cfg["id"], alert_state)
 
 
 def _render_ctx(products: list[ProductSummary], request: Request, **extra) -> dict:
@@ -228,7 +288,9 @@ async def create_config(request: Request) -> RedirectResponse:
     """Create an empty config, owned by the requesting Discord user, and
     redirect to its editor."""
     config_id = await config_create(
-        {"products": []}, owner_discord_user_id=request.headers.get("X-Discord-User-Id")
+        {"products": []},
+        owner_discord_user_id=request.headers.get("X-Discord-User-Id"),
+        owner_discord_email=request.headers.get("X-Discord-Email"),
     )
     return RedirectResponse(f"{_ROOT_PATH}/{config_id}/edit", status_code=303)
 
@@ -251,6 +313,7 @@ async def import_yaml(file: UploadFile, request: Request) -> RedirectResponse:
     config_id = await config_create(
         _products_to_db(products),
         owner_discord_user_id=request.headers.get("X-Discord-User-Id"),
+        owner_discord_email=request.headers.get("X-Discord-Email"),
     )
     return RedirectResponse(f"{_ROOT_PATH}/{config_id}/edit", status_code=303)
 
@@ -361,7 +424,11 @@ async def claim_config(config_id: UUID, request: Request) -> RedirectResponse:
     user, so it starts showing up in their "my tables" list. No-op if it's
     already owned by them; 403 if owned by someone else."""
     await _require_owner(config_id, request)
-    await config_claim(config_id, request.headers.get("X-Discord-User-Id"))
+    await config_claim(
+        config_id,
+        request.headers.get("X-Discord-User-Id"),
+        owner_discord_email=request.headers.get("X-Discord-Email"),
+    )
     return RedirectResponse(f"{_ROOT_PATH}/{config_id}/edit", status_code=303)
 
 
@@ -375,7 +442,11 @@ async def save_config(config_id: UUID, request: Request) -> RedirectResponse:
     except Exception as exc:
         logger.exception("Invalid product data for config %s", config_id)
         raise HTTPException(status_code=422, detail=str(exc))
-    updated = await config_update(config_id, _products_to_db(products))
+    updated = await config_update(
+        config_id,
+        _products_to_db(products),
+        owner_discord_email=request.headers.get("X-Discord-Email"),
+    )
     if not updated:
         raise HTTPException(status_code=404, detail="Config not found")
     return RedirectResponse(f"{_ROOT_PATH}/{config_id}", status_code=303)

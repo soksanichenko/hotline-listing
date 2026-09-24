@@ -29,6 +29,15 @@ class Config(Base):
         nullable=True,
         index=True,
     )
+    owner_discord_email: MappedColumn[str | None] = mapped_column(
+        String,
+        nullable=True,
+    )
+    alert_state: MappedColumn[dict] = mapped_column(
+        JSONB,
+        nullable=False,
+        server_default=text("'{}'::jsonb"),
+    )
     created_at: MappedColumn[DateTime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
