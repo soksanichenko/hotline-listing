@@ -42,6 +42,7 @@
             <th class="col-num"    data-i18n="col_count">К-сть</th>
             <th class="col-num"    data-i18n="col_purchased">Ціна купівлі</th>
             <th class="col-num"    data-i18n="col_price_uah">Ціна, ₴</th>
+            <th class="col-num"    data-i18n="col_min_price_uah">Мін. ціна, ₴</th>
             <th class="col-num"    data-i18n="col_purchased_total">Сума купівлі</th>
             <th class="col-num"    data-i18n="col_total">Сума, ₴</th>
             <th class="col-num"    data-i18n="col_change">Зміна, ₴</th>
@@ -64,6 +65,9 @@
             </td>
             <td class="col-num">
               {% if not p.error %}<span class="price">{{ p.price_uah | uah }}</span>{% else %}—{% endif %}
+            </td>
+            <td class="col-num">
+              {% if not p.error %}{{ p.min_price_uah | uah }}{% else %}—{% endif %}
             </td>
             <td class="col-num">
               {% if p.purchase_price %}{{ (p.purchase_price * p.count) | uah }}{% else %}—{% endif %}
@@ -104,7 +108,7 @@
         <tfoot>
           <tr class="row-total">
             <td data-i18n-total data-count="{{ products | length }}">Разом ({{ products | length }} позицій)</td>
-            <td colspan="4"></td>
+            <td colspan="5"></td>
             <td class="col-num price">
               {% if total_purchase is not none %}{{ total_purchase | uah }}{% endif %}
             </td>

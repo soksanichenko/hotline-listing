@@ -14,7 +14,7 @@ _BASE_HEADERS = {
 
 _CHART_QUERY = (
     "query getChart($path: String!) {"
-    "  chart(productPath: $path) { priceUAH priceUSD quantity }"
+    "  chart(productPath: $path) { priceUAH minPriceUAH priceUSD quantity }"
     "}"
 )
 
@@ -26,7 +26,7 @@ def extract_path(url: str) -> str:
 
 
 async def fetch_chart(client: httpx.AsyncClient, path: str) -> dict:
-    """Return raw chart payload: {priceUAH, priceUSD, quantity}."""
+    """Return raw chart payload: {priceUAH, minPriceUAH, priceUSD, quantity}."""
     r = await client.post(
         _GRAPHQL_URL,
         json={

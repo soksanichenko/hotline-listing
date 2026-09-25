@@ -4,14 +4,14 @@ Multi-tenant price-tracking dashboard for hotline.ua. Each user gets a UUID-base
 
 ## Features
 
-- **Dashboard** — price table with current UAH price, sparkline trend (last 60 days), purchase price/total comparison, and value change vs. purchase price
+- **Dashboard** — price table with current UAH price, current minimum seller price, sparkline trend (last 60 days), purchase price/total comparison, and value change vs. purchase price
 - **Price charts** — per-product price history page with UAH and USD axes (Chart.js), accessible from the dashboard
 - **Editor** — add/remove products via a web form with URL, title, count, purchase price, and purchase date; export current list as YAML
 - **YAML import** — upload an existing `config.yaml` to populate a new dashboard
 - **Caching** — chart data is cached in Redis per product (default 1 hour)
 - **i18n** — UI language toggle: Ukrainian / English / Russian (persisted in localStorage)
 - **"My tables"** — configs are tied server-side to the creating Discord user (`owner_discord_user_id`, via `X-Discord-User-Id` forwarded by the nginx gate on `/`, `/import`, and the `/{id}/edit|save|delete|claim` locations); the landing page lists them from the DB, so they follow you across browsers/devices instead of a per-browser `localStorage` list. `/{id}/edit` and `/{id}/save` are owner-only (403 otherwise); the ✕ button on the landing page really deletes the config. Configs created before this existed have no recorded owner and remain open to any Discord-authenticated user, same as before — the edit page shows a "claim as mine" button for these, which binds the config to whoever clicks it first (`POST /{id}/claim`, a no-op if already claimed by you, 403 if claimed by someone else in the meantime).
-- **Price-target email alerts** — set a target price on any product in the editor and you'll get an email at your Discord account's (verified) email address once the price drops to it or below. A checker runs periodically in the background; once notified, it stays quiet until the price rises back above the target and dips again, so you're not emailed on every check while it's still low.
+- **Price-target email alerts** — set a target price on any product in the editor and you'll get an email at your Discord account's (verified) email address once the current minimum seller price drops to it or below. A checker runs periodically in the background; once notified, it stays quiet until the price rises back above the target and dips again, so you're not emailed on every check while it's still low.
 
 ## Requirements
 

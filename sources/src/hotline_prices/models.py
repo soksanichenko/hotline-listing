@@ -14,6 +14,7 @@ class ProductSummary:
     price_uah: float
     price_usd: float
     quantity: int
+    min_price_uah: float = 0
     count: int = 1
     purchase_price: float | None = None
     purchase_date: date | None = None

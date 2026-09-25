@@ -142,6 +142,7 @@ async def _get_product(product: ProductConfig) -> ProductSummary:
             price_uah=0,
             price_usd=0,
             quantity=0,
+            min_price_uah=0,
             count=product.count,
             purchase_price=product.purchase_price,
             purchase_date=product.purchase_date,
@@ -151,6 +152,7 @@ async def _get_product(product: ProductConfig) -> ProductSummary:
     uah_series = chart["priceUAH"]
     usd_series = chart["priceUSD"]
     qty_series = chart["quantity"]
+    min_uah_series = chart.get("minPriceUAH", [])
 
     return ProductSummary(
         path=path,
@@ -159,6 +161,7 @@ async def _get_product(product: ProductConfig) -> ProductSummary:
         price_uah=uah_series[-1][1] if uah_series else 0,
         price_usd=usd_series[-1][1] if usd_series else 0,
         quantity=qty_series[-1][1] if qty_series else 0,
+        min_price_uah=min_uah_series[-1][1] if min_uah_series else 0,
         count=product.count,
         purchase_price=product.purchase_price,
         purchase_date=product.purchase_date,
@@ -180,10 +183,10 @@ async def _check_price_alerts() -> None:
                 continue
             state = alert_state.get(product.url, {})
             summary = await _get_product(product)
-            if summary.error or not summary.price_uah:
+            if summary.error or not summary.min_price_uah:
                 continue
 
-            if summary.price_uah > product.target_price:
+            if summary.min_price_uah > product.target_price:
                 if not state.get("armed", True):
                     alert_state[product.url] = {"armed": True}
                     changed = True
@@ -198,7 +201,7 @@ async def _check_price_alerts() -> None:
                     config,
                     cfg["owner_discord_email"],
                     summary.title,
-                    summary.price_uah,
+                    summary.min_price_uah,
                     product.url,
                 )
             except Exception:
@@ -206,7 +209,7 @@ async def _check_price_alerts() -> None:
                 continue
             alert_state[product.url] = {
                 "armed": False,
-                "last_notified_price": summary.price_uah,
+                "last_notified_price": summary.min_price_uah,
                 "notified_at": datetime.now(UTC).isoformat(),
             }
             changed = True
