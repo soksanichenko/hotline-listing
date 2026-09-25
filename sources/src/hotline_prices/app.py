@@ -124,6 +124,28 @@ def _slug_to_title(path: str) -> str:
     return path.replace("-", " ").title()
 
 
+_STALE_CHART_DAYS = 3
+
+
+def _chart_stale_since(uah_series: list) -> str | None:
+    """Return the last price point's date string if it's older than
+    _STALE_CHART_DAYS, else None. hotline.ua sometimes keeps updating a
+    product's seller/quantity data while its price series silently stops
+    moving, which would otherwise make us show/alert on a frozen price."""
+    if not uah_series:
+        return "—"
+    last_date_str = uah_series[-1][0]
+    try:
+        last_date = (
+            datetime.strptime(last_date_str, "%d.%m.%Y").replace(tzinfo=UTC).date()
+        )
+    except (ValueError, TypeError):
+        return None
+    if (datetime.now(UTC).date() - last_date).days > _STALE_CHART_DAYS:
+        return last_date_str
+    return None
+
+
 async def _get_product(product: ProductConfig) -> ProductSummary:
     path = extract_path(product.url)
     chart_key = f"hotline:chart:{path}"
@@ -153,6 +175,21 @@ async def _get_product(product: ProductConfig) -> ProductSummary:
     usd_series = chart["priceUSD"]
     qty_series = chart["quantity"]
     min_uah_series = chart.get("minPriceUAH", [])
+
+    if stale_since := _chart_stale_since(uah_series):
+        return ProductSummary(
+            path=path,
+            title=product.title or _slug_to_title(path),
+            hotline_url=product.url,
+            price_uah=0,
+            price_usd=0,
+            quantity=0,
+            min_price_uah=0,
+            count=product.count,
+            purchase_price=product.purchase_price,
+            purchase_date=product.purchase_date,
+            error=f"Ціна застаріла (з {stale_since})",
+        )
 
     return ProductSummary(
         path=path,
