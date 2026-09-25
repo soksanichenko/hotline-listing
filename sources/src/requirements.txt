@@ -1,13 +1,13 @@
 fastapi==0.141.1
-uvicorn==0.52.4
+uvicorn==0.53.0
 httpx==0.28.1
 redis==8.1.0
 pyyaml==6.0.3
 pydantic==2.13.5
 jinja2==3.1.6
 python-multipart==0.0.32
-sqlalchemy==2.0.52
+sqlalchemy==2.0.54
 sqlalchemy-utils==0.42.1
 alembic==1.20.0
-psycopg[binary]==3.3.5
+psycopg[binary]==3.3.6
 apscheduler==3.11.3
