@@ -200,15 +200,14 @@ async def _get_product(product: ProductConfig) -> ProductSummary:
     if stale_since := _chart_stale_since(uah_series):
         offer_prices = await _get_offer_prices(path, product.url)
         if offer_prices:
-            min_price = min(offer_prices)
             return ProductSummary(
                 path=path,
                 title=product.title or _slug_to_title(path),
                 hotline_url=product.url,
-                price_uah=min_price,
+                price_uah=sum(offer_prices) / len(offer_prices),
                 price_usd=0,
                 quantity=len(offer_prices),
-                min_price_uah=min_price,
+                min_price_uah=min(offer_prices),
                 count=product.count,
                 purchase_price=product.purchase_price,
                 purchase_date=product.purchase_date,

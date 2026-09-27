@@ -68,7 +68,7 @@ async def test_get_product_stale_fallback_with_offers(client, fake_hotline, app_
 
     summary = await app_module._get_product(ProductConfig(url=url))
     assert summary.error is None
-    assert summary.price_uah == 19000
+    assert summary.price_uah == 20000
     assert summary.min_price_uah == 19000
     assert summary.quantity == 2
 
