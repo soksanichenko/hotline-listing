@@ -57,6 +57,21 @@ def test_import_yaml_happy_path(client):
     assert "some-item" in edit_resp.text
 
 
+def test_import_yaml_with_name(client):
+    yaml_body = (
+        b"name: Laptops\nproducts:\n  - url: https://hotline.ua/ua/cat/some-item/\n"
+    )
+    resp = client.post(
+        "/import",
+        files={"file": ("cfg.yaml", yaml_body, "text/yaml")},
+        headers={"X-Discord-User-Id": "u1"},
+        follow_redirects=False,
+    )
+    config_id = resp.headers["location"].split("/")[1]
+    edit_resp = client.get(f"/{config_id}/edit", headers={"X-Discord-User-Id": "u1"})
+    assert "Laptops" in edit_resp.text
+
+
 def test_import_invalid_yaml_returns_400(client):
     resp = client.post(
         "/import",
@@ -245,6 +260,44 @@ def test_save_happy_path_persists_and_redirects(client):
         f"/{config_id}/edit", headers={"X-Discord-User-Id": "owner-1"}
     )
     assert "some-item" in edit_resp.text
+
+
+def test_save_name_persists_and_shows_up_everywhere(client):
+    config_id = _create_config(client, owner="owner-1")
+    client.post(
+        f"/{config_id}/save",
+        headers={"X-Discord-User-Id": "owner-1"},
+        json={"products": [], "name": "Laptops"},
+    )
+
+    edit_resp = client.get(
+        f"/{config_id}/edit", headers={"X-Discord-User-Id": "owner-1"}
+    )
+    assert "Laptops" in edit_resp.text
+
+    dashboard_resp = client.get(f"/{config_id}")
+    assert "Laptops" in dashboard_resp.text
+
+    landing_resp = client.get("/", headers={"X-Discord-User-Id": "owner-1"})
+    assert "Laptops" in landing_resp.text
+
+
+def test_save_empty_name_clears_it(client):
+    config_id = _create_config(client, owner="owner-1")
+    client.post(
+        f"/{config_id}/save",
+        headers={"X-Discord-User-Id": "owner-1"},
+        json={"products": [], "name": "Laptops"},
+    )
+    client.post(
+        f"/{config_id}/save",
+        headers={"X-Discord-User-Id": "owner-1"},
+        json={"products": [], "name": ""},
+    )
+    edit_resp = client.get(
+        f"/{config_id}/edit", headers={"X-Discord-User-Id": "owner-1"}
+    )
+    assert "Laptops" not in edit_resp.text
 
 
 def test_save_invalid_product_returns_422(client):

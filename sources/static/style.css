@@ -133,6 +133,14 @@ main {
     margin-bottom: 1.25rem;
 }
 
+.list-name {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-top: -0.75rem;
+    margin-bottom: 1.25rem;
+}
+
 /* ── Table ───────────────────────────────────────────────────────────────── */
 
 .table-wrap {

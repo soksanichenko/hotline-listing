@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Hotline Prices — Редактор</title>
+  <title>{% if name %}{{ name }} — {% endif %}Hotline Prices — Редактор</title>
   <link rel="stylesheet" href="{{ root_path }}/static/style.css?v={{ static_version }}">
 </head>
 <body>
@@ -39,6 +39,11 @@
   <div class="section">
     <h2 data-i18n="section_products">Список товарів</h2>
     <p style="color:var(--text-muted);margin-bottom:0.75rem" data-i18n="target_price_hint">Якщо вказати цільову ціну — на твою Discord-пошту прийде лист, коли ціна впаде до неї або нижче.</p>
+
+    <div class="field field-title" style="margin-bottom:1rem;max-width:24rem">
+      <label data-i18n="label_list_name">Назва списку (опціонально)</label>
+      <input type="text" id="list-name" value="{{ name or '' }}" placeholder="Наприклад: Ноутбуки" data-i18n-placeholder="placeholder_list_name">
+    </div>
 
     <div id="rows">
       {% for p in products %}
@@ -165,10 +170,11 @@ function collectProducts() {
 
 async function save() {
   const products = collectProducts();
+  const name = document.getElementById('list-name').value.trim() || null;
   const res = await fetch(`${ROOT_PATH}/${CONFIG_ID}/save`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ products }),
+    body: JSON.stringify({ products, name }),
   });
   if (res.redirected) {
     window.location.href = res.url;
@@ -178,8 +184,10 @@ async function save() {
 }
 
 function toYaml(products) {
-  if (!products.length) return 'products: []\n';
-  let out = 'products:\n';
+  const name = document.getElementById('list-name').value.trim();
+  let out = name ? `name: "${name.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"\n` : '';
+  if (!products.length) return out + 'products: []\n';
+  out += 'products:\n';
   for (const p of products) {
     out += `  - url: ${p.url}\n`;
     if (p.title) out += `    title: "${p.title.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"\n`;

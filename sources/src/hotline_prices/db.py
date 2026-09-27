@@ -172,6 +172,7 @@ async def configs_list_for_owner(owner_discord_user_id: str) -> list[dict]:
         return [
             {
                 "id": row.id,
+                "name": row.data.get("name"),
                 "product_count": len(row.data.get("products", [])),
                 "updated_at": row.updated_at,
             }

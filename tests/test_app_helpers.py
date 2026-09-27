@@ -117,3 +117,10 @@ def test_products_to_db_keeps_set_optional_fields(app_module):
     result = app_module._products_to_db(products)["products"][0]
     assert result["target_price"] == 999.0
     assert result["title"] == "X"
+
+
+def test_products_to_db_includes_name_only_when_set(app_module):
+    assert "name" not in app_module._products_to_db([])
+    assert "name" not in app_module._products_to_db([], name=None)
+    assert "name" not in app_module._products_to_db([], name="")
+    assert app_module._products_to_db([], name="Laptops")["name"] == "Laptops"

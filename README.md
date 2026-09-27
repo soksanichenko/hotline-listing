@@ -6,7 +6,7 @@ Multi-tenant price-tracking dashboard for hotline.ua. Each user gets a UUID-base
 
 - **Dashboard** — price table with current UAH price, current minimum seller price, sparkline trend (last 60 days), purchase price/total comparison, and value change vs. purchase price
 - **Price charts** — per-product price history page with UAH and USD axes (Chart.js), accessible from the dashboard
-- **Editor** — add/remove products via a web form with URL, title, count, purchase price, and purchase date; export current list as YAML
+- **Editor** — add/remove products via a web form with URL, title, count, purchase price, and purchase date; optionally name the list itself (shown on the dashboard and in "My tables"); export current list as YAML
 - **YAML import** — upload an existing `config.yaml` to populate a new dashboard
 - **Caching** — chart data is cached in Redis per product (default 1 hour)
 - **i18n** — UI language toggle: Ukrainian / English / Russian (persisted in localStorage)
@@ -40,6 +40,7 @@ Multi-tenant price-tracking dashboard for hotline.ua. Each user gets a UUID-base
 ### Product format
 
 ```yaml
+name: "Optional list name"
 products:
   - url: https://hotline.ua/ua/<category>/<product-slug>/
     title: "Optional display name"

@@ -123,15 +123,23 @@ async def test_set_alert_state_overwrites(db_ready):
 
 async def test_list_for_owner_scoped_and_shaped(db_ready):
     mine = await config_create(
-        {"products": [{"url": "https://hotline.ua/a/b/"}]}, owner_discord_user_id="me"
+        {"products": [{"url": "https://hotline.ua/a/b/"}], "name": "Laptops"},
+        owner_discord_user_id="me",
     )
     await config_create({"products": []}, owner_discord_user_id="someone-else")
     rows = await configs_list_for_owner("me")
     assert len(rows) == 1
     row = rows[0]
     assert row["id"] == mine
+    assert row["name"] == "Laptops"
     assert row["product_count"] == 1
-    assert set(row) == {"id", "product_count", "updated_at"}
+    assert set(row) == {"id", "name", "product_count", "updated_at"}
+
+
+async def test_list_for_owner_name_is_none_when_unset(db_ready):
+    await config_create({"products": []}, owner_discord_user_id="me")
+    rows = await configs_list_for_owner("me")
+    assert rows[0]["name"] is None
 
 
 async def test_list_for_owner_orders_newest_first(db_ready):

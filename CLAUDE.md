@@ -101,7 +101,7 @@ Table `configs` (PostgreSQL, managed by Alembic):
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | UUID PK | `gen_random_uuid()` — also the user's URL token |
-| `data` | JSONB | `{"products": [{url, title?, count, purchase_price?, purchase_date?, target_price?}]}` |
+| `data` | JSONB | `{"products": [{url, title?, count, purchase_price?, purchase_date?, target_price?}], "name"?}` — `name` is the user-set list name (optional, shown on the dashboard/landing page) |
 | `owner_discord_user_id` | text, nullable, indexed | Discord user ID that created the config; `NULL` for legacy configs created before ownership tracking |
 | `owner_discord_email` | text, nullable | Verified Discord email of the owner, captured from `X-Discord-Email` on create/save/claim; used as the price-alert notification address |
 | `alert_state` | JSONB | Per-product price-alert armed/notified state, keyed by product `url`; managed only by the background alert job, never by `/save` — see **Price-target email alerts** |

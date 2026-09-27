@@ -336,8 +336,8 @@ async def _require_owner(config_id: UUID, request: Request) -> bool:
     return owner is None
 
 
-def _products_to_db(products: list[ProductConfig]) -> dict:
-    return {
+def _products_to_db(products: list[ProductConfig], name: str | None = None) -> dict:
+    data = {
         "products": [
             {
                 k: v
@@ -347,6 +347,9 @@ def _products_to_db(products: list[ProductConfig]) -> dict:
             for p in products
         ]
     }
+    if name:
+        data["name"] = name
+    return data
 
 
 # ── Routes: landing ───────────────────────────────────────────────────────────
@@ -393,11 +396,12 @@ async def import_yaml(file: UploadFile, request: Request) -> RedirectResponse:
             for p in data.get("products", [])
             if p
         ]
+        name = data.get("name")
     except Exception as exc:
         logger.exception("Failed to parse uploaded YAML config")
         raise HTTPException(status_code=400, detail=f"Invalid YAML: {exc}")
     config_id = await config_create(
-        _products_to_db(products),
+        _products_to_db(products, name),
         owner_discord_user_id=request.headers.get("X-Discord-User-Id"),
         owner_discord_email=request.headers.get("X-Discord-Email"),
     )
@@ -432,7 +436,7 @@ async def dashboard(config_id: UUID, request: Request) -> HTMLResponse:
 
     product_cfgs = _db_to_products(data)
     products = list(await asyncio.gather(*[_get_product(p) for p in product_cfgs]))
-    ctx = _render_ctx(products, request, config_id=config_id)
+    ctx = _render_ctx(products, request, config_id=config_id, name=data.get("name"))
     return templates.TemplateResponse(request, "dashboard.html", ctx)
 
 
@@ -498,6 +502,7 @@ async def edit_form(config_id: UUID, request: Request) -> HTMLResponse:
             "request": request,
             "config_id": config_id,
             "products": products,
+            "name": data.get("name"),
             "avatar_url": request.headers.get("X-Discord-Avatar-Url"),
             "unclaimed": unclaimed,
         },
@@ -530,7 +535,7 @@ async def save_config(config_id: UUID, request: Request) -> RedirectResponse:
         raise HTTPException(status_code=422, detail=str(exc))
     updated = await config_update(
         config_id,
-        _products_to_db(products),
+        _products_to_db(products, body.get("name")),
         owner_discord_email=request.headers.get("X-Discord-Email"),
     )
     if not updated:

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Hotline Prices</title>
+  <title>{% if name %}{{ name }} — {% endif %}Hotline Prices</title>
   <link rel="stylesheet" href="{{ root_path }}/static/style.css?v={{ static_version }}">
 </head>
 <body>
@@ -32,6 +32,7 @@
 <main>
   <div class="section">
     <h2 data-i18n="section_title">Моніторинг цін</h2>
+    {% if name %}<p class="list-name">{{ name }}</p>{% endif %}
 
     <div class="table-wrap">
       <table>

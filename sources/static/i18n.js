@@ -44,6 +44,8 @@ const i18n = {
         label_target_price:   'Цільова ціна, ₴',
         target_price_hint:    'Якщо вказати цільову ціну — на твою Discord-пошту прийде лист, коли ціна впаде до неї або нижче.',
         placeholder_title:    'Назва товару',
+        label_list_name:      'Назва списку (опціонально)',
+        placeholder_list_name: 'Наприклад: Ноутбуки',
         save_error:           'Помилка збереження: ',
         // chart
         back:             'Назад',
@@ -91,6 +93,8 @@ const i18n = {
         label_target_price:   'Target price, ₴',
         target_price_hint:    'Set a target price to get an email at your Discord address once the price drops to it or below.',
         placeholder_title:    'Product name',
+        label_list_name:      'List name (optional)',
+        placeholder_list_name: 'E.g. Laptops',
         save_error:           'Save error: ',
     },
     ru: {
@@ -136,6 +140,8 @@ const i18n = {
         label_target_price:   'Целевая цена, ₴',
         target_price_hint:    'Если указать целевую цену — на твою Discord-почту придёт письмо, когда цена упадёт до неё или ниже.',
         placeholder_title:    'Название товара',
+        label_list_name:      'Название списка (необязательно)',
+        placeholder_list_name: 'Например: Ноутбуки',
         save_error:           'Ошибка сохранения: ',
     },
 };
