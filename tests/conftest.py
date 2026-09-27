@@ -76,7 +76,6 @@ def _db_schema(database_url: str) -> None:
     this tests db.py's CRUD logic against real Postgres semantics, not the
     migration chain itself)."""
     import sqlalchemy
-
     from hotline_prices.models_db import Base
 
     sync_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)

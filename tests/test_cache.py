@@ -1,6 +1,5 @@
 import fakeredis
 import pytest
-
 from hotline_prices.cache import Cache
 
 

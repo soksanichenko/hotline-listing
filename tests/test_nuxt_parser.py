@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import pytest
-
 from hotline_prices.nuxt_parser import extract_offer_prices, parse_nuxt_payload
 
 _FIXTURES = Path(__file__).parent / "fixtures"

@@ -2,14 +2,14 @@ from hotline_prices.models import ProductSummary
 
 
 def _summary(**overrides) -> ProductSummary:
-    base = dict(
-        path="a",
-        title="A",
-        hotline_url="https://hotline.ua/ua/cat/a/",
-        price_uah=1000,
-        price_usd=25,
-        quantity=3,
-    )
+    base = {
+        "path": "a",
+        "title": "A",
+        "hotline_url": "https://hotline.ua/ua/cat/a/",
+        "price_uah": 1000,
+        "price_usd": 25,
+        "quantity": 3,
+    }
     base.update(overrides)
     return ProductSummary(**base)
 

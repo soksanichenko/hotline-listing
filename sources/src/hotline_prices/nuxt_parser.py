@@ -312,8 +312,7 @@ def parse_nuxt_payload(html: str) -> dict:
 
     if return_expr is None:
         raise ValueError("No 'return' statement found in NUXT payload function body")
-    if return_expr.endswith(";"):
-        return_expr = return_expr[:-1]
+    return_expr = return_expr.removesuffix(";")
 
     return _Parser(return_expr, subs).parse_value()
 

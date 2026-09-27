@@ -1,7 +1,6 @@
 from datetime import date
 
 import pytest
-
 from hotline_prices.config import AppConfig, ProductConfig
 
 

@@ -2,7 +2,6 @@
 
 import httpx
 import pytest
-
 from hotline_prices.client import extract_path, fetch_chart, fetch_offer_prices
 
 
