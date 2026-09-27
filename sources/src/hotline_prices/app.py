@@ -217,7 +217,10 @@ async def _get_product(product: ProductConfig) -> ProductSummary:
             path=path,
             title=product.title or _slug_to_title(path),
             hotline_url=product.url,
-            price_uah=0,
+            # Last known (stale) price — kept out of the price/total columns
+            # by the template's `error` gate, but still feeds price_diff so
+            # the change-vs-purchase-price column isn't blanked too.
+            price_uah=uah_series[-1][1] if uah_series else 0,
             price_usd=0,
             quantity=0,
             min_price_uah=0,

@@ -85,7 +85,22 @@ async def test_get_product_stale_fallback_without_offers(
     )
     assert summary.error == f"Ціна застаріла (з {old})"
     assert summary.stale_since == old
-    assert summary.price_uah == 0
+    assert summary.price_uah == 12000
+
+
+async def test_get_product_stale_fallback_without_offers_still_computes_diff(
+    client, fake_hotline, app_module
+):
+    old = (datetime.now(UTC) - timedelta(days=10)).strftime("%d.%m.%Y")
+    fake_hotline.set_chart(
+        "some-slug", {"priceUAH": [[old, 12000]], "priceUSD": [], "quantity": []}
+    )
+    summary = await app_module._get_product(
+        ProductConfig(url="https://hotline.ua/ua/cat/some-slug/", purchase_price=10000)
+    )
+    assert summary.error is not None
+    assert summary.price_diff == 2000
+    assert summary.total_diff == 2000
 
 
 async def test_get_offer_prices_caches(client, fake_hotline, app_module):
