@@ -8,3 +8,4 @@ dist/
 .env
 *.har
 har.json
+.pytest_cache/

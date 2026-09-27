@@ -70,6 +70,15 @@ PYTHONPATH=sources/src uvicorn hotline_prices.app:app --reload
 
 Open `http://localhost:8000`.
 
+## Testing
+
+```bash
+uv sync --group dev
+.venv/bin/python3 -m pytest
+```
+
+Requires Docker — the test suite spins up a real ephemeral PostgreSQL container automatically; no manual DB/Redis setup needed.
+
 ## Deployment
 
 The app is deployed to `hotline-listing.zelgray.work` via Ansible.

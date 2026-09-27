@@ -21,9 +21,9 @@ class Cache:
         raw = await self._redis.get(key)
         return json.loads(raw) if raw is not None else None
 
-    async def set(self, key: str, value: Any) -> None:
-        """Serialise and store value with the configured TTL."""
-        await self._redis.set(key, json.dumps(value), ex=self._ttl)
+    async def set(self, key: str, value: Any, ttl: int | None = None) -> None:
+        """Serialise and store value, with the configured TTL unless overridden."""
+        await self._redis.set(key, json.dumps(value), ex=ttl or self._ttl)
 
     async def close(self) -> None:
         """Close the Redis connection."""

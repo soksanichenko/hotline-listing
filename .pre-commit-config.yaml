@@ -4,6 +4,6 @@ repos:
     rev: v0.15.13
     hooks:
       - id: ruff
-        args: [sources/]
+        args: [sources/, tests/]
       - id: ruff-format
-        args: [sources/]
+        args: [sources/, tests/]

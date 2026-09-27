@@ -19,10 +19,12 @@ hotline-listing/
 │   └── roles/hotline-listing/      # syncs sources/, builds image, deploys container + nginx
 ├── config.yaml                     # products list only — infra fields use AppConfig defaults
 ├── install_dependencies.sh         # pip requirements.txt + ansible-galaxy + infisical CLI
-├── pyproject.toml                  # app metadata for local dev with uv (Docker uses sources/src/requirements.txt)
+├── pyproject.toml                  # app + dev/test metadata for local dev with uv (Docker uses sources/src/requirements.txt)
 ├── uv.lock                         # uv lockfile (local dev only)
 ├── requirements.txt                # Ansible tooling: infisicalsdk, pre-commit, yamllint, ansible-lint
 ├── requirements.yml                # Galaxy: infisical.vault, community.docker
+├── tests/                          # pytest suite — see Testing section below
+├── .pre-commit-config.yaml         # ruff + ruff-format over sources/ and tests/
 └── sources/                        # Docker build context; synced as a unit to target host
     ├── Dockerfile                  # Python 3.12-slim, port 8999
     ├── alembic.ini                 # script_location = src/hotline_prices/alembic
@@ -37,13 +39,14 @@ hotline-listing/
     │       │       ├── 6bf7338d4492_add_config_owner.py
     │       │       └── 37f30702a8cc_add_price_alerts.py
     │       ├── app.py              # FastAPI routes, lifespan, Jinja2 filters, price-alert scheduler job
-    │       ├── cache.py            # async Redis wrapper (JSON, TTL)
-    │       ├── client.py           # hotline.ua GraphQL client (getChart)
+    │       ├── cache.py            # async Redis wrapper (JSON, per-key TTL override)
+    │       ├── client.py           # hotline.ua GraphQL client (getChart) + offer-page scraping
     │       ├── config.py           # AppConfig + ProductConfig (Pydantic BaseModel)
     │       ├── db.py               # SQLAlchemy async CRUD + create_db_if_not_exists
     │       ├── models.py           # ProductSummary dataclass (computed properties)
     │       ├── models_db.py        # SQLAlchemy ORM: Base, Config
-    │       └── notifications.py    # SMTP price-target alert emails
+    │       ├── notifications.py    # SMTP price-target alert emails
+    │       └── nuxt_parser.py      # parses hotline.ua's window.__NUXT__ SSR payload (per-seller offers)
     ├── static/
     │   ├── i18n.js                 # UK/EN/RU translations, applyLang/setLang/detectLang
     │   └── style.css               # dark theme
@@ -110,9 +113,9 @@ Table `configs` (PostgreSQL, managed by Alembic):
 | Package | Version | Purpose |
 |---------|---------|---------|
 | `fastapi` | 0.141.1 | Web framework |
-| `uvicorn` | 0.52.4 | ASGI server |
-| `sqlalchemy` | 2.0.52 | ORM + async engine |
-| `psycopg[binary]` | 3.3.5 | PostgreSQL driver — sync and async, single package |
+| `uvicorn` | 0.53.0 | ASGI server |
+| `sqlalchemy` | 2.0.54 | ORM + async engine |
+| `psycopg[binary]` | 3.3.6 | PostgreSQL driver — sync and async, single package |
 | `alembic` | 1.20.0 | Schema migrations |
 | `sqlalchemy-utils` | 0.42.1 | `create_database` / `database_exists` |
 | `redis` | 8.1.0 | Async Redis client |
@@ -127,11 +130,13 @@ Table `configs` (PostgreSQL, managed by Alembic):
 
 **No auth on the read-only dashboard** — `/{uuid}` and `/{uuid}/chart/...` have no access control beyond the UUID itself, so a share link works for anyone. List creation/editing (`/`, `/import`, `/{uuid}/edit|save|claim|delete`) is gated behind Discord SSO via the `meow-elite-club-portal` service (nginx `auth_request` + a cross-domain cookie bridge at `/internal/bridge` — see the `hotline-listing` Ansible role's README and `nginx-location.conf.j2`). Configs are further scoped to the Discord user that created them via `owner_discord_user_id`; `_require_owner()` in `app.py` returns 403 for non-owners and allows any Discord-authenticated user to claim legacy (pre-ownership) configs. The portal also emits a verified `X-Discord-Email` header (requires the `email` OAuth scope) — nginx forwards it on the same gated locations as `X-Discord-User-Id`, and `app.py` persists it to `owner_discord_email` on create/save/claim.
 
-**Price-target email alerts** — a product can have an optional `target_price`. An APScheduler job (`_check_price_alerts()` in `app.py`, interval `price_check_interval`) periodically checks every config with a known `owner_discord_email` and emails (`notifications.send_price_alert()`, plain SMTP via Mailcow at `mail.zelgray.work`) once a product's price drops to or below its target. The comparison uses `min_price_uah` (hotline.ua's `minPriceUAH` chart series — the lowest current seller offer, matching the "від X грн" price shown on the product page), not the `price_uah` shown on the dashboard/chart — see **hotline.ua API** below for why they differ. Per-product armed/notified state lives in the `alert_state` JSONB column — separate from `data` so the user-editable `/save` endpoint never clobbers it. State machine: price above target → armed; price ≤ target while armed → send + disarm; price ≤ target while disarmed → silent (already notified); price rises back above target → re-arm, so a later dip notifies again.
+**Price-target email alerts** — a product can have an optional `target_price`. An APScheduler job (`_check_price_alerts()` in `app.py`, interval `price_check_interval`) periodically checks every config with a known `owner_discord_email` and emails (`notifications.send_price_alert()`, plain SMTP via Mailcow at `mail.zelgray.work`) once a product's price drops to or below its target. The comparison uses the real per-seller minimum price scraped from the product page (`_get_offer_prices()`, see **Per-seller offer scraping** below) — not `getChart`'s `minPriceUAH` — since that GraphQL aggregate can lag the live lowest seller price by up to a day (see **hotline.ua API**). Per-product armed/notified state lives in the `alert_state` JSONB column — separate from `data` so the user-editable `/save` endpoint never clobbers it. State machine: price above target → armed; price ≤ target while armed → send + disarm; price ≤ target while disarmed → silent (already notified); price rises back above target → re-arm, so a later dip notifies again.
+
+**Per-seller offer scraping** — the per-seller offer list (individual store prices/`firmTitle`) isn't available from the public `getChart` query; hotline.ua only exposes it via an authenticated GraphQL operation, and that login is behind a Cloudflare captcha, which was deliberately not automated (captcha-solving/headless-browser bypass is fragile and circumvents anti-bot protection the site put there on purpose). Instead, the same offer data is already embedded, unauthenticated, in the plain product page's Nuxt SSR hydration payload (`window.__NUXT__=(function(a,b,c,...){...return {...}})(v1,v2,...);` — a dedup-by-reference IIFE, not JSON). `nuxt_parser.py` hand-parses this with a small recursive-descent parser rather than executing it with a JS engine: Node's `vm` module is explicitly documented as not a security boundary, so running hotline.ua's page JS in it would carry a real sandbox-escape/RCE risk class that a text parser structurally can't have. `client.fetch_offer_prices()` fetches the page and calls `nuxt_parser.extract_offer_prices()`; `app._get_offer_prices()` wraps that with its own Redis cache key (`hotline:offers:{path}`) and a shorter TTL (`_OFFER_PRICES_TTL`, 1800s) than the chart cache, since this backs price alerts and should track `price_check_interval` more closely than `cache_ttl`.
 
 **hotline.ua API** — uses the undocumented GraphQL endpoint at `https://hotline.ua/svc/frontend-api/graphql`, operation `getChart`. This requires no authentication. The `byPathQueryProduct` operation does require auth and is not used. `getChart` returns several distinct price series, not one: `priceUAH`/`priceUSD` (used for the dashboard's displayed price, the chart, and totals — appears to be an average/typical price across sellers, not the cheapest) and `minPriceUAH` (the actual lowest current seller offer, used only for price-target alert comparisons — see **Price-target email alerts** above). The two can differ by a meaningful margin and move independently; don't assume a stalled `priceUAH` means stale data before checking whether `minPriceUAH` already moved.
 
-**Stale chart detection** — hotline.ua sometimes keeps `quantity` (seller count) updating daily for a product while its `priceUAH`/`minPriceUAH` series silently stop moving for weeks/months (observed: Samsung 980 PRO SSD frozen at 04.06.2026 with today's `quantity` still fresh). `_get_product()` in `app.py` checks the last `priceUAH` point's date via `_chart_stale_since()`; if it's more than `_STALE_CHART_DAYS` (3) days old, the product is returned with `error` set instead of a price, so the dashboard shows an error badge instead of a frozen price and `_check_price_alerts()` skips it (same `if summary.error` guard as any other fetch failure).
+**Stale chart detection** — hotline.ua sometimes keeps `quantity` (seller count) updating daily for a product while its `priceUAH`/`minPriceUAH` series silently stop moving for weeks/months (observed: Samsung 980 PRO SSD frozen at 04.06.2026 with today's `quantity` still fresh). `_get_product()` in `app.py` checks the last `priceUAH` point's date via `_chart_stale_since()`; if it's more than `_STALE_CHART_DAYS` (3) days old, it now falls back to `_get_offer_prices()` (see **Per-seller offer scraping**) — if that returns real offers, the dashboard shows `min(offer_prices)` as the price and `len(offer_prices)` as the quantity instead of an error badge; only if the scrape also comes back empty does it fall through to the original `error` badge behavior. `_check_price_alerts()` doesn't go through `_get_product()`/this fallback at all — it calls `_get_offer_prices()` directly for every priced product regardless of chart staleness.
 
 **DB auto-creation** — `create_db_if_not_exists(sync_url)` (via `sqlalchemy_utils`) is called in the FastAPI lifespan before `init_db`. Tables are managed exclusively by Alembic — run `alembic upgrade head` manually after first deploy.
 
@@ -172,6 +177,19 @@ PYTHONPATH=sources/src uvicorn hotline_prices.app:app --reload
 ```
 
 All commands run from the **project root**; `config.yaml` is found in CWD.
+
+## Testing
+
+```bash
+uv sync --group dev
+.venv/bin/python3 -m pytest
+```
+
+Requires Docker — `tests/test_db.py` and every test using the `client`/`db_ready` fixtures spin up a real ephemeral PostgreSQL via `testcontainers` (one container per test session). Redis is faked in-process (`fakeredis`, monkeypatched over `aioredis.from_url`), hotline.ua HTTP calls are mocked (`httpx.MockTransport` via the `fake_hotline` fixture), and no local Postgres/Redis setup is needed. `pyproject.toml`'s `[tool.pytest.ini_options]` sets `pythonpath = ["sources/src"]`, so no `PYTHONPATH` env var is needed when running via `pytest`/`uv`.
+
+`tests/conftest.py` writes its own temp `config.yaml` pointing at the ephemeral DB and sets `CONFIG_PATH` before `hotline_prices.app` is first imported — that module reads `config.yaml` at import time with no env-var override (see **config.yaml resolution** below), so test files must never import `hotline_prices.app` at module top level; only through the `app_module`/`client` fixtures (see the module docstring in `conftest.py`).
+
+Test files roughly mirror `sources/src/hotline_prices/*.py` one-to-one (`test_nuxt_parser.py`, `test_client.py`, `test_config.py`, `test_models.py`, `test_cache.py`, `test_db.py`, `test_notifications.py`, `test_app_helpers.py`, `test_app_pricing.py`, `test_app_routes.py`), plus `tests/fixtures/` holding a real captured hotline.ua page for `nuxt_parser` regression testing.
 
 ## Deployment (Ansible)
 

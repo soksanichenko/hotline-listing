@@ -10,7 +10,26 @@ dependencies = [
     "pyyaml==6.0.3",
     "pydantic==2.13.5",
     "jinja2==3.1.6",
+    "sqlalchemy==2.0.54",
+    "sqlalchemy-utils==0.42.1",
+    "alembic==1.20.0",
+    "psycopg[binary]==3.3.6",
+    "apscheduler==3.11.3",
+    "python-multipart==0.0.32",
 ]
 
 [tool.setuptools.packages.find]
 where = ["sources/src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["sources/src"]
+asyncio_mode = "auto"
+
+[dependency-groups]
+dev = [
+    "fakeredis>=2.38.0",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "testcontainers[postgres]>=4.15.0",
+]

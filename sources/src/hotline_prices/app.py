@@ -17,7 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from .cache import Cache
-from .client import extract_path, fetch_chart
+from .client import extract_path, fetch_chart, fetch_offer_prices
 from .config import AppConfig, ProductConfig
 from .db import (
     config_claim,
@@ -125,6 +125,7 @@ def _slug_to_title(path: str) -> str:
 
 
 _STALE_CHART_DAYS = 3
+_OFFER_PRICES_TTL = 1800
 
 
 def _chart_stale_since(uah_series: list) -> str | None:
@@ -144,6 +145,26 @@ def _chart_stale_since(uah_series: list) -> str | None:
     if (datetime.now(UTC).date() - last_date).days > _STALE_CHART_DAYS:
         return last_date_str
     return None
+
+
+async def _get_offer_prices(path: str, url: str) -> list[float]:
+    """Return per-seller offer prices for a product, cached for _OFFER_PRICES_TTL
+    — shorter than the chart cache_ttl, since this backs price-target alerts
+    and should stay closer to price_check_interval's freshness.
+
+    Empty list means "no data" (fetch/parse failure, or hotline.ua changed
+    its page format) — callers treat that as a soft failure, not an error.
+    """
+    cache_key = f"hotline:offers:{path}"
+    prices = await _cache.get(cache_key)
+    if prices is None:
+        try:
+            prices = await fetch_offer_prices(_http, url)
+        except Exception:
+            logger.exception("Failed to fetch seller offers for %s", path)
+            return []
+        await _cache.set(cache_key, prices, ttl=_OFFER_PRICES_TTL)
+    return prices
 
 
 async def _get_product(product: ProductConfig) -> ProductSummary:
@@ -177,6 +198,22 @@ async def _get_product(product: ProductConfig) -> ProductSummary:
     min_uah_series = chart.get("minPriceUAH", [])
 
     if stale_since := _chart_stale_since(uah_series):
+        offer_prices = await _get_offer_prices(path, product.url)
+        if offer_prices:
+            min_price = min(offer_prices)
+            return ProductSummary(
+                path=path,
+                title=product.title or _slug_to_title(path),
+                hotline_url=product.url,
+                price_uah=min_price,
+                price_usd=0,
+                quantity=len(offer_prices),
+                min_price_uah=min_price,
+                count=product.count,
+                purchase_price=product.purchase_price,
+                purchase_date=product.purchase_date,
+                price_history_uah=[p for _, p in uah_series[-60:]],
+            )
         return ProductSummary(
             path=path,
             title=product.title or _slug_to_title(path),
@@ -210,7 +247,12 @@ async def _check_price_alerts() -> None:
     """Background job: for every product with a target_price, notify the
     config owner by email once its price drops to or below that target.
     Re-arms once the price rises back above the target, so a later dip
-    notifies again instead of staying silent forever."""
+    notifies again instead of staying silent forever.
+
+    Compares against the real per-seller minimum price scraped from the
+    product page (_get_offer_prices), not getChart's minPriceUAH — that
+    GraphQL aggregate can lag the live lowest seller price by up to a day.
+    """
     for cfg in await configs_list_with_owner_email():
         products = _db_to_products(cfg["data"])
         alert_state = dict(cfg["alert_state"])
@@ -219,11 +261,14 @@ async def _check_price_alerts() -> None:
             if product.target_price is None:
                 continue
             state = alert_state.get(product.url, {})
-            summary = await _get_product(product)
-            if summary.error or not summary.min_price_uah:
+            path = extract_path(product.url)
+            offer_prices = await _get_offer_prices(path, product.url)
+            if not offer_prices:
+                logger.warning("No seller offers parsed for %s", product.url)
                 continue
+            min_price = min(offer_prices)
 
-            if summary.min_price_uah > product.target_price:
+            if min_price > product.target_price:
                 if not state.get("armed", True):
                     alert_state[product.url] = {"armed": True}
                     changed = True
@@ -232,13 +277,14 @@ async def _check_price_alerts() -> None:
             if not state.get("armed", True):
                 continue
 
+            title = product.title or _slug_to_title(path)
             try:
                 await asyncio.to_thread(
                     send_price_alert,
                     config,
                     cfg["owner_discord_email"],
-                    summary.title,
-                    summary.min_price_uah,
+                    title,
+                    min_price,
                     product.url,
                 )
             except Exception:
@@ -246,7 +292,7 @@ async def _check_price_alerts() -> None:
                 continue
             alert_state[product.url] = {
                 "armed": False,
-                "last_notified_price": summary.min_price_uah,
+                "last_notified_price": min_price,
                 "notified_at": datetime.now(UTC).isoformat(),
             }
             changed = True
