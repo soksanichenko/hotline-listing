@@ -57,7 +57,8 @@
             <td class="col-title">
               {% if p.error %}<span class="error-badge">!</span>{% endif %}
               <a href="{{ p.hotline_url }}" target="_blank" rel="noopener">{{ p.title }}</a>
-              {% if p.error %}<div class="error-msg">{{ p.error }}</div>{% endif %}
+              {% if p.stale_since %}<div class="error-msg" data-i18n-stale data-date="{{ p.stale_since }}">{{ p.error }}</div>
+              {% elif p.error %}<div class="error-msg">{{ p.error }}</div>{% endif %}
             </td>
             <td class="col-date">{{ p.purchase_date or '—' }}</td>
             <td class="col-num qty">{{ p.count }}</td>

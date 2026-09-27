@@ -1,5 +1,7 @@
 """HTTP route tests via FastAPI TestClient."""
 
+from datetime import UTC, datetime, timedelta
+
 import sqlalchemy
 
 
@@ -132,6 +134,21 @@ def test_dashboard_renders_chart_price(client, fake_hotline):
     resp = client.get(f"/{config_id}")
     assert resp.status_code == 200
     assert "999" in resp.text
+
+
+def test_dashboard_stale_price_uses_client_side_i18n_hook(client, fake_hotline):
+    old = (datetime.now(UTC) - timedelta(days=10)).strftime("%d.%m.%Y")
+    fake_hotline.set_chart(
+        "some-item", {"priceUAH": [[old, 999]], "priceUSD": [], "quantity": []}
+    )
+    config_id = _create_config(client, owner="u1")
+    client.post(
+        f"/{config_id}/save",
+        headers={"X-Discord-User-Id": "u1"},
+        json={"products": [{"url": "https://hotline.ua/ua/cat/some-item/"}]},
+    )
+    resp = client.get(f"/{config_id}")
+    assert f'data-i18n-stale data-date="{old}"' in resp.text
 
 
 # ── chart ────────────────────────────────────────────────────────────────────

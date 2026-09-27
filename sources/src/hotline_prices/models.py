@@ -20,6 +20,7 @@ class ProductSummary:
     purchase_date: date | None = None
     price_history_uah: list[float] = field(default_factory=list)
     error: str | None = None
+    stale_since: str | None = None
 
     @property
     def total_uah(self) -> float:

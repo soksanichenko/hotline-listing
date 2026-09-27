@@ -225,6 +225,7 @@ async def _get_product(product: ProductConfig) -> ProductSummary:
             purchase_price=product.purchase_price,
             purchase_date=product.purchase_date,
             error=f"Ціна застаріла (з {stale_since})",
+            stale_since=stale_since,
         )
 
     return ProductSummary(

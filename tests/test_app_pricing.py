@@ -84,6 +84,7 @@ async def test_get_product_stale_fallback_without_offers(
         ProductConfig(url="https://hotline.ua/ua/cat/some-slug/")
     )
     assert summary.error == f"Ціна застаріла (з {old})"
+    assert summary.stale_since == old
     assert summary.price_uah == 0
 
 

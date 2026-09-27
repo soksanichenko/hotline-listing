@@ -16,6 +16,7 @@ const i18n = {
         col_links:           'Посилання',
         total_row:           n => `Разом (${n} позицій)`,
         cache_meta:          (min, ts) => `кеш ${min} хв · оновлено ${ts}`,
+        stale_price:         date => `Ціна застаріла (з ${date})`,
         link_chart:          'Графік',
         // landing
         landing_title:    'Моніторинг цін з Hotline.ua',
@@ -66,6 +67,7 @@ const i18n = {
         col_links:           'Links',
         total_row:           n => `Total (${n} items)`,
         cache_meta:          (min, ts) => `cache ${min} min · updated ${ts}`,
+        stale_price:         date => `Price is stale (as of ${date})`,
         link_chart:          'Chart',
         landing_title:    'Price Monitoring from Hotline.ua',
         landing_desc:     'Add a product list — get a summary table with current prices, trends and comparison to your purchase price. Your table is saved at a unique link.',
@@ -113,6 +115,7 @@ const i18n = {
         col_links:           'Ссылки',
         total_row:           n => `Итого (${n} позиций)`,
         cache_meta:          (min, ts) => `кеш ${min} мин · обновлено ${ts}`,
+        stale_price:         date => `Цена устарела (с ${date})`,
         link_chart:          'График',
         landing_title:    'Мониторинг цен с Hotline.ua',
         landing_desc:     'Добавь список товаров — получи сводную таблицу с текущими ценами, динамикой и сравнением с ценой покупки. Твоя таблица хранится по уникальной ссылке.',
@@ -174,6 +177,10 @@ function applyLang(lang) {
 
     const metaEl = document.querySelector('[data-i18n-meta]');
     if (metaEl) metaEl.textContent = tr.cache_meta(metaEl.dataset.ttl, metaEl.dataset.ts);
+
+    document.querySelectorAll('[data-i18n-stale]').forEach(el => {
+        el.textContent = tr.stale_price(el.dataset.date);
+    });
 
     if (typeof onLangChange === 'function') onLangChange(lang);
 
