@@ -119,6 +119,10 @@ class _Parser:
         if name == "void":
             self.parse_value()  # `void 0` etc. — operand is discarded
             return None
+        if name == "new":
+            # `new Date(...)` etc. — reuses the call-handling below via
+            # recursion (unrecognized constructors just resolve to None).
+            return self.parse_value()
         while self._pos < len(self._text) and self._text[self._pos] == ".":
             m2 = _IDENT_RE.match(self._text, self._pos + 1)
             if not m2:

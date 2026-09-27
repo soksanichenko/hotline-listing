@@ -53,6 +53,13 @@ def test_object_assign_call_merges_dicts():
     assert parse_nuxt_payload(html) == {"m": {"a": 1, "b": 2}}
 
 
+def test_new_constructor_call_resolves_to_none():
+    html = _payload_html(
+        "(function(a){return {price:a,posted:new Date(1700000000000)}})(999);"
+    )
+    assert parse_nuxt_payload(html) == {"price": 999, "posted": None}
+
+
 def test_missing_nuxt_marker_raises():
     with pytest.raises(ValueError):
         parse_nuxt_payload("<html><body>no payload here</body></html>")
@@ -92,3 +99,13 @@ def test_extract_offer_prices_real_page_fixture():
     assert sorted(extract_offer_prices(html)) == sorted(
         [19000.0, 19061.0, 19239.0, 19243.0, 19399.0, 19399.0, 20369.0]
     )
+
+
+def test_extract_offer_prices_real_page_with_new_date_in_reviews():
+    """Regression: this product's review/Q&A section uses `new Date(...)`
+    literals, which an earlier version of the parser choked on."""
+    fixture = _FIXTURES / "samsung_980_pro_ssd_page.html"
+    if not fixture.exists():
+        pytest.skip("real-page fixture not present")
+    html = fixture.read_text(encoding="utf-8")
+    assert sorted(extract_offer_prices(html)) == [11790.0, 12860.0]
