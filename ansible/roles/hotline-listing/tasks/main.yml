@@ -54,6 +54,9 @@
     dest: "{{ hotline_listing_data_dir }}/config.yaml"
     mode: '0600'
   become: yes
+  # Holds the SMTP and Redis passwords.
+  no_log: true
+  register: _hotline_listing_config
   tags:
     - hotline-listing
 
@@ -64,6 +67,9 @@
     state: started
     restart_policy: unless-stopped
     recreate: "{{ docker_force_recreate | default(false) }}"
+    # config.yaml is a single-file bind mount: a changed file is a new inode
+    # the running container never sees until it restarts.
+    restart: "{{ _hotline_listing_config is changed }}"
     pull: false
     networks:
       - name: "{{ docker_network }}"
