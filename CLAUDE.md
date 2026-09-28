@@ -114,10 +114,9 @@ Table `configs` (PostgreSQL, managed by Alembic):
 |---------|---------|---------|
 | `fastapi` | 0.141.1 | Web framework |
 | `uvicorn` | 0.53.0 | ASGI server |
-| `sqlalchemy` | 2.0.54 | ORM + async engine |
+| `sqlalchemy` | 2.1.0 | ORM + async engine |
 | `psycopg[binary]` | 3.3.6 | PostgreSQL driver — sync and async, single package |
 | `alembic` | 1.20.0 | Schema migrations |
-| `sqlalchemy-utils` | 0.42.1 | `create_database` / `database_exists` |
 | `redis` | 8.1.0 | Async Redis client |
 | `httpx` | 0.28.1 | HTTP client for hotline.ua GraphQL |
 | `pydantic` | 2.13.5 | Config validation |
@@ -138,9 +137,9 @@ Table `configs` (PostgreSQL, managed by Alembic):
 
 **Stale chart detection** — hotline.ua sometimes keeps `quantity` (seller count) updating daily for a product while its `priceUAH`/`minPriceUAH` series silently stop moving for weeks/months (observed: Samsung 980 PRO SSD frozen at 04.06.2026 with today's `quantity` still fresh). `_get_product()` in `app.py` checks the last `priceUAH` point's date via `_chart_stale_since()`; if it's more than `_STALE_CHART_DAYS` (3) days old, it now falls back to `_get_offer_prices()` (see **Per-seller offer scraping**) — if that returns real offers, the dashboard shows `price_uah = mean(offer_prices)` (matching `priceUAH`'s usual "typical/average price" semantics), `min_price_uah = min(offer_prices)`, and `quantity = len(offer_prices)`, instead of an error badge; only if the scrape also comes back empty does it fall through to the original `error` badge behavior — except `price_uah` still gets the last known (stale) chart price in that case too (everything else stays zeroed), so `ProductSummary.price_diff`/`total_diff` (vs. purchase price) aren't blanked out just because the price itself is too old to trust for display; the dashboard template still hides the price/min-price/total cells for any row with `error` set, showing only the diff. `_check_price_alerts()` doesn't go through `_get_product()`/this fallback at all — it calls `_get_offer_prices()` directly for every priced product regardless of chart staleness, and always compares against `min(offer_prices)` (see **Price-target email alerts**), not the average — a target-price hit should fire on the cheapest available offer, not a blended one.
 
-**DB auto-creation** — `create_db_if_not_exists(sync_url)` (via `sqlalchemy_utils`) is called in the FastAPI lifespan before `init_db`. Tables are managed exclusively by Alembic — run `alembic upgrade head` manually after first deploy.
+**DB auto-creation** — `create_db_if_not_exists(sync_url)` (plain `psycopg`, checking `pg_database` and issuing `CREATE DATABASE` against the `postgres` maintenance database — no `sqlalchemy_utils` dependency) is called in the FastAPI lifespan before `init_db`. Tables are managed exclusively by Alembic — run `alembic upgrade head` manually after first deploy.
 
-**SQLAlchemy driver** — `psycopg[binary]==3.3.5` is the only PostgreSQL driver. Async URL uses `postgresql+psycopg_async://`; sync URL (for sqlalchemy_utils and Alembic) uses `postgresql+psycopg://` — both derived from the plain `database_url` in config via `sync_database_url` / `async_database_url` properties.
+**SQLAlchemy driver** — `psycopg[binary]==3.3.6` is the only PostgreSQL driver. Async URL uses `postgresql+psycopg_async://`; sync URL (for `create_db_if_not_exists` and Alembic) uses `postgresql+psycopg://` — both derived from the plain `database_url` in config via `sync_database_url` / `async_database_url` properties.
 
 **Migrations on start** — `entrypoint.sh` runs `alembic upgrade head` before starting uvicorn, so the schema is always current after a container restart or redeploy.
 

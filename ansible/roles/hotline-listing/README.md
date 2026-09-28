@@ -64,7 +64,7 @@ ansible-playbook -i inventories/zelgray.work playbooks/deploy.yml \
 
 ## Notes
 
-- The PostgreSQL database (`hotline_prices`) is created automatically at container startup via `sqlalchemy_utils`. Alembic migrations also run automatically on every container start via `entrypoint.sh` — no manual step needed.
+- The PostgreSQL database (`hotline_prices`) is created automatically at container startup via a direct `psycopg` check against the `postgres` maintenance database. Alembic migrations also run automatically on every container start via `entrypoint.sh` — no manual step needed.
 - The image is built on the **target host** from `sources/` synced by this role. It is not pulled from a registry.
 - `hotline_listing_nginx_proxy` is `false` by default — set it in `group_vars/all.yml` to enable nginx integration.
 - List creation/editing (`/`, `/import`, `/{id}/edit`, `/{id}/save`) is gated behind the Discord SSO gate (`meow-elite-club-portal`, `auth_request` + `/internal/bridge`, see `docs/portal-architecture.md` in `infra`). The read-only per-config dashboard (`/{id}`, `/{id}/chart/...`) is intentionally left open — the UUID is the share link's access token, and gating it would break sharing a dashboard with someone outside the allow-list.
