@@ -27,7 +27,7 @@ asyncio_mode = "auto"
 
 [dependency-groups]
 dev = [
-    "fakeredis>=2.38.0",
+    "fakeredis>=2.39.0",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "testcontainers[postgres]>=4.15.0",
