@@ -10,8 +10,9 @@ Deploys the hotline-listing FastAPI service as a Docker container on the target 
 4. Templates `config.yaml` (Redis URL, database URL, cache TTL, SMTP settings for price-target alerts) into the data directory
 5. Starts the container with `config.yaml` mounted read-only and `ROOT_PATH` + `STATIC_VERSION` env vars set
 6. Deploys the nginx location config at `{{ hotline_listing_domain }}` (when `hotline_listing_nginx_proxy: true`) — proxies to the app and to the portal's `/auth`/`/bridge/consume` via nginx `resolver` + `set`, not a static `upstream {}` block, so a portal redeploy alone can't leave this pointed at a stale IP
-7. Deploys a 301 redirect on the `zelgray.work` apex (`/hotline-listing/...` → `{{ hotline_listing_domain }}/...`) so pre-migration share links keep working
-8. Purges the Cloudflare cache (when `cf_purge_cache: true`)
+7. Removes the stale `custom-upstream/hotline-listing.conf` left over from the static-upstream era (it would stop nginx from starting while the container is down)
+8. Deploys a 301 redirect on the `zelgray.work` apex (`/hotline-listing/...` → `{{ hotline_listing_domain }}/...`) so pre-migration share links keep working
+9. Purges the Cloudflare cache (when `cf_purge_cache: true`)
 
 ## Variables
 
