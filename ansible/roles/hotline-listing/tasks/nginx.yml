@@ -17,6 +17,17 @@
   when: hotline_listing_nginx_proxy
   notify: Reload nginx
 
+# Left over from before the location switched to resolver + variable. Nothing
+# references it, but a static upstream is resolved once at nginx start and
+# fails the whole nginx ("host not found in upstream") while the container is
+# down.
+- name: Remove the stale hotline-listing nginx upstream config
+  ansible.builtin.file:
+    path: "{{ nginx_custom_upstream_path }}/hotline-listing.conf"
+    state: absent
+  become: yes
+  notify: Reload nginx
+
 - name: Register hotline-listing with the Discord SSO portal
   ansible.builtin.uri:
     url: https://meow-elite.club/api/services/register
