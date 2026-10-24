@@ -1,0 +1,30 @@
+---
+name: Tests
+
+on:
+  push:
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    name: pytest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync --locked --group dev
+
+      # The suite starts its own PostgreSQL through testcontainers, which only
+      # needs the Docker daemon already present on the runner.
+      - name: Run tests
+        run: uv run --locked pytest -q
