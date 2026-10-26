@@ -73,6 +73,23 @@ async def test_get_product_stale_fallback_with_offers(client, fake_hotline, app_
     assert summary.quantity == 2
 
 
+async def test_get_product_stale_fallback_uses_median_not_mean(
+    client, fake_hotline, app_module
+):
+    old = (datetime.now(UTC) - timedelta(days=10)).strftime("%d.%m.%Y")
+    fake_hotline.set_chart(
+        "some-slug", {"priceUAH": [[old, 12000]], "priceUSD": [], "quantity": []}
+    )
+    url = "https://hotline.ua/ua/cat/some-slug/"
+    # One outlier seller: mean would be 15750, median ignores it.
+    fake_hotline.set_page_html(url, _nuxt_html([10000, 11000, 12000, 30000]))
+
+    summary = await app_module._get_product(ProductConfig(url=url))
+    assert summary.price_uah == 11500
+    assert summary.min_price_uah == 10000
+    assert summary.quantity == 4
+
+
 async def test_get_product_stale_fallback_without_offers(
     client, fake_hotline, app_module
 ):
