@@ -116,14 +116,14 @@ def test_dashboard_empty_products_200(client):
 
 
 def test_dashboard_renders_chart_price(client, fake_hotline):
-    today = datetime.now(UTC).strftime("%d.%m.%Y")
+    recent = (datetime.now(UTC) - timedelta(days=1)).strftime("%d.%m.%Y")
     fake_hotline.set_chart(
         "some-item",
         {
-            "priceUAH": [[today, 999]],
-            "minPriceUAH": [[today, 900]],
-            "priceUSD": [[today, 25]],
-            "quantity": [[today, 3]],
+            "priceUAH": [[recent, 999]],
+            "minPriceUAH": [[recent, 900]],
+            "priceUSD": [[recent, 25]],
+            "quantity": [[recent, 3]],
         },
     )
     config_id = _create_config(client, owner="u1")
