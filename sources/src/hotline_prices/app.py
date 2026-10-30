@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import os
+import statistics
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
@@ -204,7 +205,7 @@ async def _get_product(product: ProductConfig) -> ProductSummary:
                 path=path,
                 title=product.title or _slug_to_title(path),
                 hotline_url=product.url,
-                price_uah=sum(offer_prices) / len(offer_prices),
+                price_uah=statistics.median(offer_prices),
                 price_usd=0,
                 quantity=len(offer_prices),
                 min_price_uah=min(offer_prices),
