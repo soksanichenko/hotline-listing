@@ -1,19 +1,26 @@
 ---
 version: 2
-updates:
-  - package-ecosystem: "pip"
-    directory: "/"
+
+multi-ecosystem-groups:
+  python:
     schedule:
       interval: "weekly"
-    target-branch: "main"
-    groups:
-      pip-dependencies:
-        patterns:
-          - "*"
-        update-types:
-          - "major"
-          - "minor"
-          - "patch"
+
+updates:
+  # sources/src/requirements.txt (Docker image) mirrors the runtime pins of
+  # pyproject.toml, and only the uv ecosystem refreshes uv.lock. One group keeps
+  # them in a single PR; pip skips pyproject.toml so uv is the only one editing it.
+  - package-ecosystem: "pip"
+    directory: "/"
+    patterns: ["*"]
+    multi-ecosystem-group: "python"
+    exclude-paths:
+      - "pyproject.toml"
+
+  - package-ecosystem: "uv"
+    directory: "/"
+    patterns: ["*"]
+    multi-ecosystem-group: "python"
 
   - package-ecosystem: "github-actions"
     directory: "/"
