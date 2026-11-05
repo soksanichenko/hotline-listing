@@ -8,13 +8,13 @@ dependencies = [
     "httpx==0.28.1",
     "redis==8.1.0",
     "pyyaml==6.0.3",
-    "pydantic==2.14.1",
+    "pydantic==2.14.2",
     "jinja2==3.1.6",
     "sqlalchemy[asyncio]==2.1.6",
     "alembic==1.20.1",
     "psycopg[binary]==3.3.6",
     "apscheduler==3.11.3",
-    "python-multipart==0.0.32",
+    "python-multipart==0.0.33",
 ]
 
 [tool.setuptools.packages.find]
@@ -28,7 +28,7 @@ asyncio_mode = "auto"
 [dependency-groups]
 dev = [
     "fakeredis>=2.40.0",
-    "pytest>=9.1.1",
-    "pytest-asyncio>=1.4.0",
+    "pytest>=9.2.0",
+    "pytest-asyncio>=1.4.1.post1",
     "testcontainers[postgres]>=4.15.0",
 ]
