@@ -3,7 +3,7 @@ name = "hotline-listing"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi==0.162.0",
+    "fastapi==0.162.7",
     "uvicorn==0.54.0",
     "httpx==0.28.1",
     "redis==8.1.0",
@@ -12,7 +12,7 @@ dependencies = [
     "jinja2==3.1.6",
     "sqlalchemy[asyncio]==2.1.8",
     "alembic==1.20.1",
-    "psycopg[binary]==3.3.8",
+    "psycopg[binary]==3.3.9",
     "apscheduler==3.11.3",
     "python-multipart==0.0.33",
 ]
@@ -29,6 +29,6 @@ asyncio_mode = "auto"
 dev = [
     "fakeredis>=2.40.0",
     "pytest>=9.2.0",
-    "pytest-asyncio>=1.4.1.post1",
+    "pytest-asyncio>=1.5.0",
     "testcontainers[postgres]>=4.15.0",
 ]
