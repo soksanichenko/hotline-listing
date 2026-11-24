@@ -3,18 +3,18 @@ name = "hotline-listing"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi==0.162.7",
+    "fastapi==0.165.0",
     "uvicorn==0.54.0",
     "httpx==0.28.1",
     "redis==8.1.0",
-    "pyyaml==6.0.3",
-    "pydantic==2.14.3",
+    "pyyaml==6.0.4",
+    "pydantic==2.14.4",
     "jinja2==3.1.6",
-    "sqlalchemy[asyncio]==2.1.8",
+    "sqlalchemy[asyncio]==2.1.9",
     "alembic==1.20.1",
     "psycopg[binary]==3.3.9",
     "apscheduler==3.11.3",
-    "python-multipart==0.0.33",
+    "python-multipart==0.0.34",
 ]
 
 [tool.setuptools.packages.find]
